@@ -1,0 +1,313 @@
+/* ---------------------------------------------------------------------------
+   WILDER — client fédéré des observations LICHEN
+   Reprend la palette et l'ossature du site LICHEN : lichen (vert-gris pâle) et
+   forêt (vert profond). Pas de dégradé, pas d'ombre, pas de police distante :
+   filets fins, papier, encre. Le thème suit la préférence système, sans script.
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f3f5ef;
+  --paper: #fbfcf9;
+  --ink: #1c2620;
+  --ink-soft: #55645b;
+  --line: #dbe1d6;
+  --line-strong: #c2ccbc;
+  --forest: #2f5540;
+  --forest-ink: #24422f;
+  --lichen: #8ba585;
+  --lichen-wash: #e7eee3;
+  --alert: #8a3d2c;
+  --alert-wash: #f6e7e3;
+
+  --radius: 3px;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12160f;
+    --paper: #191e17;
+    --ink: #e3e9dd;
+    --ink-soft: #9bab9d;
+    --line: #2b332a;
+    --line-strong: #3b4539;
+    --forest: #9cc4a5;
+    --forest-ink: #b8d6bd;
+    --lichen: #7f9a7d;
+    --lichen-wash: #202a20;
+    --alert: #e0a08e;
+    --alert-wash: #2c211d;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.62;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+h1 { font-size: 1.85rem; margin: 0 0 .4rem; }
+h2 { font-size: 1.3rem; margin: 2.4rem 0 .8rem; }
+h3 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--forest); text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+small { font-size: .82rem; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 2.4rem 0; }
+ul { padding-left: 1.15rem; }
+li { margin-bottom: .35rem; }
+code { font-family: var(--mono); font-size: .85em; }
+
+/* --- Ossature ------------------------------------------------------------ */
+
+.wrap { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem; }
+.wrap-wide { max-width: 74rem; margin: 0 auto; padding: 0 1.25rem; }
+
+.top {
+  border-top: 3px solid var(--forest);
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.top-in {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1rem; padding: .85rem 0; flex-wrap: wrap;
+}
+.brand {
+  font-family: var(--serif); font-size: 1rem; font-weight: 600;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink);
+  text-decoration: none;
+}
+.brand span { color: var(--ink-soft); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.top nav { display: flex; gap: 1.1rem; font-size: .86rem; }
+.top nav a { color: var(--ink-soft); text-decoration: none; }
+.top nav a:hover, .top nav a.router-link-active { color: var(--forest); text-decoration: underline; }
+
+main { padding: 2.5rem 0 3.5rem; }
+
+.foot {
+  border-top: 1px solid var(--line);
+  padding: 1.4rem 0 2.4rem;
+  font-size: .82rem;
+  color: var(--ink-soft);
+}
+.foot nav { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-bottom: .6rem; }
+.foot a { color: var(--ink-soft); }
+
+/* --- Blocs de texte ------------------------------------------------------ */
+
+.lede { font-size: 1.08rem; color: var(--ink-soft); }
+.oeil {
+  font-family: var(--serif); font-size: .74rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--lichen); margin-bottom: .5rem;
+}
+
+.note {
+  border-left: 2px solid var(--lichen);
+  background: var(--lichen-wash);
+  padding: .85rem 1rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: .9rem;
+}
+.note p:last-child { margin-bottom: 0; }
+.note strong { color: var(--forest-ink); }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.meta { font-size: .8rem; color: var(--ink-soft); }
+.mono { font-family: var(--mono); font-size: .78rem; word-break: break-all; }
+.centre { text-align: center; }
+
+/* --- Boutons ------------------------------------------------------------- */
+
+.btn {
+  font: inherit; font-size: .95rem; font-weight: 500;
+  padding: .6rem 1.2rem; border-radius: var(--radius);
+  border: 1px solid var(--forest); background: var(--forest); color: var(--paper);
+  cursor: pointer; text-decoration: none; display: inline-block;
+}
+.btn:hover { background: var(--forest-ink); border-color: var(--forest-ink); }
+.btn[disabled] { opacity: .55; cursor: progress; }
+.btn.ghost { background: transparent; color: var(--forest); }
+.btn.ghost:hover { background: var(--lichen-wash); }
+.btn.sm { font-size: .85rem; padding: .35rem .75rem; }
+@media (prefers-color-scheme: dark) { .btn { color: #12160f; } }
+
+.actions { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+
+/* --- Champs -------------------------------------------------------------- */
+
+input[type="text"], input[type="search"], select {
+  width: 100%; font: inherit; font-size: .95rem;
+  color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  padding: .55rem .7rem;
+}
+input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--forest); outline-offset: 1px; border-color: var(--forest);
+}
+
+/* --- Recherche d'acteur (WebFinger) -------------------------------------- */
+
+.lookup { display: flex; gap: .5rem; flex-wrap: wrap; }
+.lookup input { flex: 1 1 18rem; }
+.lookup .btn { flex: none; }
+
+/* --- Étiquettes / badges ------------------------------------------------- */
+
+.tag {
+  display: inline-block; font-size: .72rem; padding: .1rem .5rem;
+  border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-soft);
+  margin: 0 .2rem .2rem 0; white-space: nowrap; text-decoration: none;
+}
+a.tag:hover { border-color: var(--forest); color: var(--forest); }
+.tag.hash { border-color: var(--lichen); color: var(--forest); background: var(--lichen-wash); }
+
+.badge {
+  display: inline-block; font-family: var(--serif); font-size: .68rem;
+  letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+  color: var(--forest); background: var(--lichen-wash);
+  border: 1px solid var(--lichen); border-radius: 999px; padding: .05rem .55rem;
+}
+
+/* --- Profil d'acteur ----------------------------------------------------- */
+
+.actor {
+  background: var(--paper); border: 1px solid var(--line);
+  border-top: 3px solid var(--forest); border-radius: var(--radius);
+  padding: 1.4rem 1.5rem;
+}
+.actor-top { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; }
+.actor h1 { margin: 0; font-size: 1.5rem; }
+.actor .handle { font-family: var(--mono); font-size: .82rem; color: var(--ink-soft); }
+.actor .summary { margin: .8rem 0 0; }
+.actor-stats { display: flex; gap: 1.6rem; margin-top: 1rem; font-size: .85rem; }
+.actor-stats b { font-family: var(--serif); font-size: 1.15rem; color: var(--forest); display: block; }
+.actor-stats span { color: var(--ink-soft); }
+
+.dl { margin: 1rem 0 0; font-size: .8rem; }
+.dl div { display: flex; gap: .6rem; padding: .3rem 0; border-top: 1px solid var(--line); }
+.dl dt { flex: 0 0 6.5rem; color: var(--ink-soft); }
+.dl dd { margin: 0; flex: 1; min-width: 0; }
+
+/* --- Fil d'observations -------------------------------------------------- */
+
+.feed { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.4rem; }
+
+.observation {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--lichen);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+}
+.obs-head {
+  display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+  font-size: .78rem; color: var(--ink-soft); margin-bottom: .5rem;
+}
+.obs-head .verb {
+  font-family: var(--serif); letter-spacing: .1em; text-transform: uppercase;
+  font-size: .72rem; color: var(--lichen); font-weight: 600;
+}
+.obs-head .dot { color: var(--line-strong); }
+.obs-content { margin: 0 0 .6rem; }
+.obs-content:last-child { margin-bottom: 0; }
+
+.obs-media {
+  display: grid; gap: .5rem; margin: .7rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+.obs-media figure { margin: 0; }
+.obs-media img {
+  width: 100%; height: 10rem; object-fit: cover;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+}
+.obs-media figcaption { font-size: .74rem; color: var(--ink-soft); margin-top: .2rem; }
+
+.place {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .82rem; color: var(--forest-ink);
+  border-top: 1px solid var(--line); padding-top: .55rem; margin-top: .6rem;
+}
+.place .pin { color: var(--lichen); flex: none; }
+.place .coord { font-family: var(--mono); font-size: .74rem; color: var(--ink-soft); }
+
+.tags { margin-top: .55rem; }
+
+.obs-foot {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: .6rem; flex-wrap: wrap; margin-top: .6rem; font-size: .76rem; color: var(--ink-soft);
+}
+
+/* --- JSON brut (« lire le fil » du protocole) ---------------------------- */
+
+.raw { margin-top: .6rem; }
+.raw summary {
+  cursor: pointer; font-size: .76rem; color: var(--ink-soft);
+  font-family: var(--serif); letter-spacing: .04em;
+}
+.raw summary:hover { color: var(--forest); }
+.raw pre {
+  margin: .5rem 0 0; padding: .8rem;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow-x: auto; font-family: var(--mono); font-size: .74rem; line-height: 1.5;
+  color: var(--ink);
+}
+
+/* --- Instance (NodeInfo) ------------------------------------------------- */
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .7rem; }
+.kpi { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem .9rem; }
+.kpi b { display: block; font-family: var(--serif); font-size: 1.75rem; line-height: 1.1; color: var(--forest); }
+.kpi span { display: block; font-size: .78rem; color: var(--ink-soft); }
+
+/* --- Carte schématique --------------------------------------------------- */
+
+.map {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper); padding: .8rem;
+}
+.map svg { display: block; width: 100%; height: auto; }
+.map .field { fill: var(--lichen-wash); stroke: var(--line-strong); }
+.map .pt { fill: var(--forest); stroke: var(--paper); stroke-width: 1.5; }
+.map .pt-label { font-family: var(--mono); font-size: 7px; fill: var(--ink-soft); }
+
+/* --- États --------------------------------------------------------------- */
+
+.empty {
+  border: 1px dashed var(--line-strong); border-radius: var(--radius);
+  padding: 2rem 1rem; text-align: center; color: var(--ink-soft); font-size: .9rem;
+}
+.err {
+  border-left: 2px solid var(--alert); background: var(--alert-wash);
+  padding: .85rem 1rem; border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--alert); font-size: .9rem;
+}
+.spin { color: var(--ink-soft); font-size: .9rem; font-style: italic; }
+
+@media (max-width: 40rem) {
+  h1 { font-size: 1.5rem; }
+  .dl div { flex-direction: column; gap: .1rem; }
+  .dl dt { flex-basis: auto; }
+}
+
+@media print {
+  .top nav, .foot, .btn, .raw { display: none; }
+  body { background: #fff; color: #000; }
+}

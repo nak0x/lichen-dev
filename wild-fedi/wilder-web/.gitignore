@@ -1,0 +1,23 @@
+# --- Dependencies ---------------------------------------------------------
+node_modules
+
+# --- Nuxt / Nitro build output --------------------------------------------
+.nuxt
+.output
+.nitro
+.cache
+.data
+dist
+
+# package-lock.json is intentionally NOT ignored: the Docker build runs against
+# it, and it pins the dependency tree for reproducible installs.
+
+# --- Local environment ----------------------------------------------------
+# Ignore real env files, but keep the committed example.
+.env
+.env.*
+!.env.example
+
+# --- Misc -----------------------------------------------------------------
+*.log
+.DS_Store

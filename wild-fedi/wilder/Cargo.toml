@@ -1,0 +1,37 @@
+[package]
+name = "wilder"
+version = "0.1.0"
+edition = "2024"
+description = "A bare, queue-backed ActivityPub server for the LICHEN federated network"
+license = "AGPL-3.0-or-later"
+
+[dependencies]
+# --- async runtime & web ---
+tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["trace"] }
+
+# --- (de)serialization ---
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- outbound HTTP (delivery + remote actor fetch) ---
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+url = "2"
+
+# --- cryptography for HTTP Signatures (RustCrypto, pure Rust, no system OpenSSL) ---
+rsa = { version = "0.9", features = ["pem"] }
+sha2 = { version = "0.10", features = ["oid"] } # `oid` lets Pkcs1v15Sign emit the SHA-256 DigestInfo prefix
+rand = "0.8"                                    # rand 0.8 == rand_core 0.6, which is what rsa 0.9 expects
+base64 = "0.22"
+httpdate = "1"
+
+# --- misc plumbing ---
+async-trait = "0.1"   # dyn-compatible async traits (native async-fn-in-trait is not object safe yet)
+async-channel = "2"   # MPMC queue so N workers can share one receiver
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

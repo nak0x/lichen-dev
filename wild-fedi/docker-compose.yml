@@ -1,0 +1,49 @@
+# Pile fédérée wild-fedi : le serveur ActivityPub « wilder » et son client web.
+# Le client interroge le serveur par son nom de service interne (`wilder`), donc
+# le navigateur n'a jamais besoin d'atteindre le serveur directement.
+name: wild-fedi
+
+services:
+  # --- Back : serveur ActivityPub -------------------------------------------
+  wilder:
+    build:
+      context: ./wilder
+    image: wild-fedi/wilder
+    environment:
+      WILDER_BIND: 0.0.0.0:8080
+      WILDER_SCHEME: http
+      # Le domaine EST l'identité fédérée. Ici, le nom de service interne, que le
+      # client sait joindre depuis le réseau compose. À remplacer par un domaine
+      # public (et WILDER_SCHEME=https) en production.
+      WILDER_DOMAIN: wilder:8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # nodeinfo est public : un 200 signifie « prêt à fédérer ».
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/.well-known/nodeinfo"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  # --- Front : client web ----------------------------------------------------
+  wilder-web:
+    build:
+      context: ./wilder-web
+    image: wild-fedi/wilder-web
+    environment:
+      # Config d'exécution Nuxt (préfixe NUXT_ → runtimeConfig).
+      NUXT_WILDER_URL: http://wilder:8080
+      NUXT_PUBLIC_HOME_HANDLE: beaver-class@wilder:8080
+      NUXT_PUBLIC_INSTANCE_NAME: wilder
+      HOST: 0.0.0.0
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      # On attend que le serveur soit réellement prêt (RSA + amorçage) avant de
+      # démarrer le front, pour que la première requête aboutisse.
+      wilder:
+        condition: service_healthy
+    restart: unless-stopped

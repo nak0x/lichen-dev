@@ -1,0 +1,19 @@
+# OS and editor cruft shared across the wild-fedi projects. Language- and
+# build-specific ignores live in each subproject (wilder/, wilder-web/).
+
+# --- OS files -------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# --- Editor / IDE ---------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Logs & temp ----------------------------------------------------------
+*.log

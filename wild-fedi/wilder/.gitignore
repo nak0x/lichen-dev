@@ -1,0 +1,17 @@
+# --- Rust / Cargo ---------------------------------------------------------
+# Build output (the heavy one: hundreds of MB of compiled artifacts).
+/target
+
+# rustfmt backups.
+**/*.rs.bk
+
+# MSVC debugger files (harmless entry on other platforms).
+*.pdb
+
+# Cargo.lock is intentionally NOT ignored: wilder is a binary application, so
+# the exact dependency versions belong in the repository for reproducible builds.
+
+# --- Local environment ----------------------------------------------------
+# Runtime is configured via WILDER_* env vars; a local .env is never committed.
+.env
+.env.*
