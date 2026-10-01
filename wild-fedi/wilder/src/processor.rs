@@ -55,7 +55,7 @@ impl JobProcessor for AppJobProcessor {
                 let local = self
                     .actors
                     .get(&sender)
-                    .await
+                    .await?
                     .ok_or_else(|| anyhow!("delivery sender {sender} no longer exists"))?;
                 let key_id = self.config.key_id(&sender);
                 self.federation

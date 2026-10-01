@@ -119,7 +119,7 @@ impl ActivityHandler for FollowHandler {
                     inbox: delivery_inbox,
                 },
             )
-            .await;
+            .await?;
 
         // Acknowledge with an Accept that echoes the original Follow as its
         // object (the shape Mastodon and friends expect), and enqueue delivery
@@ -168,7 +168,7 @@ impl ActivityHandler for UndoHandler {
             .and_then(|o| o.get("type"))
             .and_then(Value::as_str);
         if inner_type == Some("Follow") {
-            ctx.followers.remove(&ctx.recipient, &ctx.sender_id).await;
+            ctx.followers.remove(&ctx.recipient, &ctx.sender_id).await?;
             tracing::info!(follower = %ctx.sender_id, "removed follower via Undo(Follow)");
         } else {
             tracing::info!(?inner_type, "Undo of unhandled activity; ignoring");
@@ -219,7 +219,7 @@ impl ActivityHandler for RecordingHandler {
     ) -> anyhow::Result<()> {
         ctx.activities
             .record_inbox(&ctx.recipient, raw.clone())
-            .await;
+            .await?;
         tracing::info!(verb = self.verb, recipient = %ctx.recipient, "recorded activity");
         Ok(())
     }

@@ -4,6 +4,39 @@
 name: wild-fedi
 
 services:
+  # --- Store durable : Postgres (source de vérité, relationnel) --------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wilder
+      POSTGRES_PASSWORD: wilder
+      POSTGRES_DB: wilder
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wilder -d wilder"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  # --- Store volatile : Redis (sessions, fils, files, caches) ----------------
+  redis:
+    image: redis:7-alpine
+    # appendonly : la file de jobs survit à un redémarrage (les fils, eux, sont
+    # reconstructibles et peuvent être perdus sans conséquence).
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
   # --- Back : serveur ActivityPub -------------------------------------------
   wilder:
     build:
@@ -16,8 +49,15 @@ services:
       # client sait joindre depuis le réseau compose. À remplacer par un domaine
       # public (et WILDER_SCHEME=https) en production.
       WILDER_DOMAIN: wilder:8080
+      DATABASE_URL: postgres://wilder:wilder@postgres:5432/wilder
+      REDIS_URL: redis://redis:6379
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       # nodeinfo est public : un 200 signifie « prêt à fédérer ».
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/.well-known/nodeinfo"]
@@ -47,3 +87,7 @@ services:
       wilder:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

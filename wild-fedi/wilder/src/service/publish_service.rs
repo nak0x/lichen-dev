@@ -31,11 +31,11 @@ impl PublishService {
         }
     }
 
-    pub async fn publish(&self, username: &str, activity: Value) {
+    pub async fn publish(&self, username: &str, activity: Value) -> anyhow::Result<()> {
         self.activities
             .append_outbox(username, activity.clone())
-            .await;
-        for follower in self.followers.list(username).await {
+            .await?;
+        for follower in self.followers.list(username).await? {
             self.queue
                 .enqueue(Job::Deliver {
                     sender: username.to_string(),
@@ -44,5 +44,6 @@ impl PublishService {
                 })
                 .await;
         }
+        Ok(())
     }
 }

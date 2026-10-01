@@ -4,6 +4,9 @@ FROM rust:1-slim-bookworm AS builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+# `sqlx::migrate!` embeds ./migrations at COMPILE time, so the directory must be
+# present in the build context (no database needed to build, only to run).
+COPY migrations ./migrations
 # On met en cache le registre cargo et le dossier `target` entre les builds, puis
 # on copie le binaire HORS du montage cache : un montage cache ne persiste pas
 # dans la couche image, contrairement à /usr/local/bin.

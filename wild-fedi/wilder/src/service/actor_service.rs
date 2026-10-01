@@ -33,7 +33,7 @@ impl ActorService {
         }
     }
 
-    pub async fn find(&self, username: &str) -> Option<LocalActor> {
+    pub async fn find(&self, username: &str) -> anyhow::Result<Option<LocalActor>> {
         self.actors.get(username).await
     }
 
@@ -62,55 +62,59 @@ impl ActorService {
         }
     }
 
-    pub async fn outbox_collection(&self, username: &str) -> OrderedCollection {
-        let items = self.activities.outbox(username).await;
-        OrderedCollection::new(
+    pub async fn outbox_collection(&self, username: &str) -> anyhow::Result<OrderedCollection> {
+        let items = self.activities.outbox(username).await?;
+        Ok(OrderedCollection::new(
             vocab::activity_context(),
             self.config.outbox_url(username),
             items,
-        )
+        ))
     }
 
-    pub async fn followers_collection(&self, username: &str) -> OrderedCollection {
+    pub async fn followers_collection(&self, username: &str) -> anyhow::Result<OrderedCollection> {
         // We expose follower IRIs, not the actors' full documents — that's the
         // conventional (and privacy-preserving) shape for this collection.
         let items = self
             .followers
             .list(username)
-            .await
+            .await?
             .into_iter()
             .map(|f| Value::String(f.actor_id))
             .collect();
-        OrderedCollection::new(
+        Ok(OrderedCollection::new(
             vocab::activity_context(),
             self.config.followers_url(username),
             items,
-        )
+        ))
     }
 
     /// Resolve a WebFinger `acct:` resource to a JRD document (README §2).
     /// Returns `None` (→ 404) for accounts we don't host or the wrong domain.
-    pub async fn webfinger(&self, resource: &str) -> Option<Value> {
+    pub async fn webfinger(&self, resource: &str) -> anyhow::Result<Option<Value>> {
         // Expect `acct:username@domain`; the domain must be ours.
         let acct = resource.strip_prefix("acct:").unwrap_or(resource);
-        let (username, domain) = acct.split_once('@')?;
+        let Some((username, domain)) = acct.split_once('@') else {
+            return Ok(None);
+        };
         if domain != self.config.domain {
-            return None;
+            return Ok(None);
         }
-        let actor = self.actors.get(username).await?;
-        Some(json!({
+        let Some(actor) = self.actors.get(username).await? else {
+            return Ok(None);
+        };
+        Ok(Some(json!({
             "subject": format!("acct:{}@{}", actor.username, self.config.domain),
             "links": [{
                 "rel": "self",
                 "type": "application/activity+json",
                 "href": self.config.actor_url(&actor.username),
             }],
-        }))
+        })))
     }
 
     /// The NodeInfo 2.1 document other servers read to discover what we run.
-    pub async fn nodeinfo(&self) -> Value {
-        json!({
+    pub async fn nodeinfo(&self) -> anyhow::Result<Value> {
+        Ok(json!({
             "version": "2.1",
             "software": {
                 "name": self.config.software_name,
@@ -119,11 +123,11 @@ impl ActorService {
             "protocols": ["activitypub"],
             "services": { "inbound": [], "outbound": [] },
             "openRegistrations": false,
-            "usage": { "users": { "total": self.actors.count().await } },
+            "usage": { "users": { "total": self.actors.count().await? } },
             "metadata": {
                 "nodeName": "wilder",
                 "purpose": "LICHEN federated nature observations",
             },
-        })
+        }))
     }
 }

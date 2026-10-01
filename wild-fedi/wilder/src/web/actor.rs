@@ -13,7 +13,7 @@ pub async fn actor(
     let actor = state
         .actor_service
         .find(&name)
-        .await
+        .await?
         .ok_or(AppError::NotFound)?;
     Ok(ActivityJson(state.actor_service.actor_document(&actor)))
 }
@@ -28,10 +28,10 @@ pub async fn outbox(
     state
         .actor_service
         .find(&name)
-        .await
+        .await?
         .ok_or(AppError::NotFound)?;
     Ok(ActivityJson(
-        state.actor_service.outbox_collection(&name).await,
+        state.actor_service.outbox_collection(&name).await?,
     ))
 }
 
@@ -43,9 +43,9 @@ pub async fn followers(
     state
         .actor_service
         .find(&name)
-        .await
+        .await?
         .ok_or(AppError::NotFound)?;
     Ok(ActivityJson(
-        state.actor_service.followers_collection(&name).await,
+        state.actor_service.followers_collection(&name).await?,
     ))
 }

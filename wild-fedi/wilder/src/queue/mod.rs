@@ -5,19 +5,28 @@
 //! the queue. This is the standard ActivityPub shape: it bounds request latency,
 //! smooths bursts, and stops one slow remote peer from blocking the HTTP path.
 
+// The in-process channel queue and its worker pool are test doubles; production
+// uses the durable Redis-Stream queue below.
+#[cfg(test)]
 pub mod memory;
+pub mod redis;
 pub mod worker;
 
+#[cfg(test)]
 pub use memory::InMemoryQueue;
-pub use worker::WorkerPool;
+pub use redis::{RedisQueue, RedisWorkerPool};
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// A unit of deferred work. Inbox jobs carry *already-verified* data, so workers
 /// never re-check trust. Delivery is one job per recipient inbox, so a single
 /// unreachable peer can't hold up the others.
-#[derive(Debug, Clone)]
+///
+/// `Serialize`/`Deserialize` let a job round-trip through a Redis Stream, so the
+/// queue survives a restart and can be drained by workers in another process.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Job {
     /// Handle a verified inbound activity against a local actor's inbox.
     ProcessInbox {

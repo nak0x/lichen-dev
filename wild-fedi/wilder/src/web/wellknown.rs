@@ -21,7 +21,7 @@ pub async fn webfinger(
     let jrd = state
         .actor_service
         .webfinger(resource)
-        .await
+        .await?
         .ok_or(AppError::NotFound)?;
     // WebFinger has its own content type (RFC 7033): application/jrd+json.
     Ok((
@@ -43,6 +43,6 @@ pub async fn nodeinfo_discovery(State(state): State<AppState>) -> Response {
 }
 
 /// `GET /nodeinfo/2.1` — the NodeInfo document itself (README §4, contract 7).
-pub async fn nodeinfo(State(state): State<AppState>) -> Response {
-    Json(state.actor_service.nodeinfo().await).into_response()
+pub async fn nodeinfo(State(state): State<AppState>) -> Result<Response, AppError> {
+    Ok(Json(state.actor_service.nodeinfo().await?).into_response())
 }

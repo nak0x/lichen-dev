@@ -26,15 +26,23 @@ use crate::config::AppConfig;
 use crate::crypto::KeyPair;
 use crate::federation::FederationClient;
 use crate::processor::AppJobProcessor;
-use crate::queue::{InMemoryQueue, JobQueue, WorkerPool};
-use crate::repository::memory::InMemoryStore;
+use crate::queue::redis::build_pool;
+use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
+use crate::repository::postgres::PgStore;
 use crate::repository::{ActivityRepository, ActorRepository, FollowerRepository, LocalActor};
 use crate::service::{ActorService, InboxService, PublishService};
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
 
+/// Name of the Redis Stream holding federation jobs, and its consumer group.
+const JOB_STREAM: &str = "wilder:jobs";
+const JOB_GROUP: &str = "wilder-workers";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Load a local .env in development (no-op when absent, e.g. in the container).
+    dotenvy::dotenv().ok();
+
     // Structured logs; RUST_LOG overrides the default.
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -46,18 +54,27 @@ async fn main() -> anyhow::Result<()> {
     let config = Arc::new(AppConfig::from_env()?);
     tracing::info!(domain = %config.domain, "starting wilder");
 
-    // --- storage: one concrete store behind three trait objects (DIP) ---
-    let store = Arc::new(InMemoryStore::new());
+    // --- storage: Postgres source of truth behind the three repository traits ---
+    // One concrete `PgStore` implements all of them; DIP keeps callers unaware.
+    let store = Arc::new(
+        PgStore::connect(&config.database_url)
+            .await
+            .context("connecting to Postgres")?,
+    );
+    store.migrate().await.context("running migrations")?;
     let actors: Arc<dyn ActorRepository> = store.clone();
     let followers: Arc<dyn FollowerRepository> = store.clone();
     let activities: Arc<dyn ActivityRepository> = store.clone();
 
-    // --- work queue: create the enqueue side first; workers are spawned last ---
-    let (queue_impl, receiver) = InMemoryQueue::bounded(config.queue_capacity);
-    let queue: Arc<dyn JobQueue> = Arc::new(queue_impl);
+    // --- work queue: durable Redis Stream; build the producer side first ---
+    let redis = build_pool(&config.redis_url, config.worker_count + 16)
+        .context("building Redis pool")?;
+    let queue: Arc<dyn JobQueue> =
+        Arc::new(RedisQueue::new(redis.clone(), JOB_STREAM, config.queue_capacity));
 
-    // Seed a demo actor so the server is inspectable out of the box (README §7).
-    // We publish through the same PublishService a real endpoint would use.
+    // Seed a demo actor on first boot (Postgres now persists across restarts, so
+    // this is idempotent — see `seed_demo_actor`). Publishes through the same
+    // PublishService a real endpoint would use.
     let publish_service = PublishService::new(
         Arc::clone(&activities),
         Arc::clone(&followers),
@@ -87,15 +104,21 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&activities),
     ));
 
-    // --- worker pool: consumes the queue via the processor adapter ---
+    // --- worker pool: consumes the Redis Stream via the processor adapter ---
     let processor = Arc::new(AppJobProcessor::new(
         Arc::clone(&config),
         Arc::clone(&inbox_service),
         Arc::clone(&federation),
         Arc::clone(&actors),
     ));
-    let _workers = WorkerPool::spawn(config.worker_count, receiver, processor);
-    tracing::info!(workers = config.worker_count, "worker pool started");
+    let _workers = RedisWorkerPool::spawn(
+        config.worker_count,
+        redis.clone(),
+        JOB_STREAM,
+        JOB_GROUP,
+        processor,
+    )
+    .await?;
 
     // --- HTTP server ---
     let state = AppState {
@@ -124,6 +147,12 @@ async fn seed_demo_actor(
     publisher: &PublishService,
 ) -> anyhow::Result<()> {
     let username = "beaver-class";
+    // Idempotent: with a durable store, only seed when the actor is absent, so a
+    // restart neither duplicates the sample post nor rotates the actor's key.
+    if actors.get(username).await?.is_some() {
+        tracing::debug!(actor = username, "demo actor already present; skipping seed");
+        return Ok(());
+    }
     let keypair = KeyPair::generate()?;
     actors
         .insert(LocalActor {
@@ -134,7 +163,7 @@ async fn seed_demo_actor(
             private_key_pem: keypair.private_pem()?,
             public_key_pem: keypair.public_pem()?,
         })
-        .await;
+        .await?;
 
     // A sample observation, shaped like README §5's structured Note. Built with
     // our typed vocabulary models to exercise the serialisation path.
@@ -154,7 +183,7 @@ async fn seed_demo_actor(
         tag: vec![serde_json::json!({ "type": "Hashtag", "name": "#castor" })],
         location: Some(serde_json::json!({
             "type": "Place",
-            "name": "Rivière, aval du pont",
+            "name": "Rivière, en aval du pont",
             "latitude": 45.75,
             "longitude": 4.85,
         })),
@@ -171,7 +200,7 @@ async fn seed_demo_actor(
     };
     publisher
         .publish(username, serde_json::to_value(&create)?)
-        .await;
+        .await?;
 
     tracing::info!(actor = %actor_id, "seeded demo actor");
     Ok(())

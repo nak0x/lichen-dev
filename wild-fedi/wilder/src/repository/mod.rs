@@ -2,7 +2,11 @@
 //! on a concrete store — the Dependency-Inversion pin that lets us swap the
 //! in-memory store for Postgres/SQLite without touching anything upstream.
 
+// The in-memory store is a test double: it lets services be unit-tested against
+// the repository traits without a live Postgres. Production wires `PgStore`.
+#[cfg(test)]
 pub mod memory;
+pub mod postgres;
 
 use async_trait::async_trait;
 use serde_json::Value;
@@ -30,24 +34,29 @@ pub struct Follower {
     pub inbox: String,
 }
 
+// The three federation-substrate traits now return `anyhow::Result`: a real
+// database can fail, and silently dropping a write (a published post that never
+// persisted) is not acceptable. Errors flow through `?` into `AppError::Internal`
+// at the web edge. The in-memory impl is infallible and simply wraps in `Ok`.
+
 #[async_trait]
 pub trait ActorRepository: Send + Sync {
-    async fn get(&self, username: &str) -> Option<LocalActor>;
-    async fn insert(&self, actor: LocalActor);
-    async fn count(&self) -> usize;
+    async fn get(&self, username: &str) -> anyhow::Result<Option<LocalActor>>;
+    async fn insert(&self, actor: LocalActor) -> anyhow::Result<()>;
+    async fn count(&self) -> anyhow::Result<usize>;
 }
 
 #[async_trait]
 pub trait FollowerRepository: Send + Sync {
-    async fn add(&self, username: &str, follower: Follower);
-    async fn remove(&self, username: &str, follower_actor_id: &str);
-    async fn list(&self, username: &str) -> Vec<Follower>;
+    async fn add(&self, username: &str, follower: Follower) -> anyhow::Result<()>;
+    async fn remove(&self, username: &str, follower_actor_id: &str) -> anyhow::Result<()>;
+    async fn list(&self, username: &str) -> anyhow::Result<Vec<Follower>>;
 }
 
 /// Stores activities we publish (outbox) and ones we accept (inbox history).
 #[async_trait]
 pub trait ActivityRepository: Send + Sync {
-    async fn append_outbox(&self, username: &str, activity: Value);
-    async fn outbox(&self, username: &str) -> Vec<Value>;
-    async fn record_inbox(&self, username: &str, activity: Value);
+    async fn append_outbox(&self, username: &str, activity: Value) -> anyhow::Result<()>;
+    async fn outbox(&self, username: &str) -> anyhow::Result<Vec<Value>>;
+    async fn record_inbox(&self, username: &str, activity: Value) -> anyhow::Result<()>;
 }

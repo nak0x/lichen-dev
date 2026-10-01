@@ -28,10 +28,32 @@ httpdate = "1"
 
 # --- misc plumbing ---
 async-trait = "0.1"   # dyn-compatible async traits (native async-fn-in-trait is not object safe yet)
-async-channel = "2"   # MPMC queue so N workers can share one receiver
-chrono = "0.4"
-uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 thiserror = "2"
 anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"      # load a local .env in development; a no-op when the file is absent
+
+# --- durable store: Postgres (source of truth, relational, low write / high persistence) ---
+# Compile-time-checked queries; `.sqlx/` offline cache lets Docker build without a live DB.
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "uuid", "chrono", "json"] }
+
+# --- volatile store: Redis (sessions, feeds, caches, queue — high write / rebuildable) ---
+deadpool-redis = "0.23"
+# Direct dep only to switch on the `streams` feature (XADD/XREADGROUP/XACK for the job
+# queue). Feature unification folds it into the single redis build deadpool already uses.
+redis = { version = "1", features = ["streams"] }
+
+# --- password hashing (RustCrypto family, matching the HTTP-signature crypto choices) ---
+argon2 = "0.6"
+
+# --- object storage: MinIO via the S3 API (media bytes; metadata stays in Postgres) ---
+aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-credential-types = "1"
+
+[dev-dependencies]
+# In-process MPMC channel, used only by the test-double queue (`queue::memory`).
+async-channel = "2"

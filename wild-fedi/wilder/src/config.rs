@@ -16,6 +16,10 @@ pub struct AppConfig {
     pub queue_capacity: usize,
     pub software_name: String,
     pub software_version: String,
+    /// Postgres connection string (the durable, relational source of truth).
+    pub database_url: String,
+    /// Redis connection string (sessions, feeds, caches, the job queue).
+    pub redis_url: String,
 }
 
 impl AppConfig {
@@ -34,6 +38,12 @@ impl AppConfig {
             queue_capacity: parse_env("WILDER_QUEUE_CAPACITY", 1024)?,
             software_name: "wilder".to_string(),
             software_version: env!("CARGO_PKG_VERSION").to_string(),
+            // Sensible local defaults so `cargo run` works against a dev stack;
+            // compose overrides these with the internal service hostnames.
+            database_url: std::env::var("DATABASE_URL")
+                .unwrap_or_else(|_| "postgres://wilder:wilder@127.0.0.1:5432/wilder".to_string()),
+            redis_url: std::env::var("REDIS_URL")
+                .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
         })
     }
 

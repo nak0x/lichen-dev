@@ -25,7 +25,7 @@ pub async fn inbox(
     body: Bytes,
 ) -> Result<StatusCode, AppError> {
     // Cheap existence check before we spend effort verifying a signature.
-    if state.actors.get(&name).await.is_none() {
+    if state.actors.get(&name).await?.is_none() {
         return Err(AppError::NotFound);
     }
     ingest(&state, &method, uri.path(), &headers, &body, Some(name)).await
@@ -108,7 +108,7 @@ async fn ingest(
     //    expand) is logged, not errored — the sender did nothing wrong.
     let recipients = match explicit_recipient {
         Some(name) => vec![name],
-        None => resolve_local_recipients(state, &activity).await,
+        None => resolve_local_recipients(state, &activity).await?,
     };
     if recipients.is_empty() {
         tracing::debug!(sender = %sender_id, "inbox delivery matched no local recipients");
@@ -155,7 +155,10 @@ fn digest_matches(sent: &str, expected: &str) -> bool {
 /// Limitation (noted deliberately): we resolve only directly-addressed actor
 /// IRIs, not collection addresses like a `followers` URL. Expanding those would
 /// mean knowing which local users follow the sender — a fuller server's job.
-async fn resolve_local_recipients(state: &AppState, activity: &IncomingActivity) -> Vec<String> {
+async fn resolve_local_recipients(
+    state: &AppState,
+    activity: &IncomingActivity,
+) -> anyhow::Result<Vec<String>> {
     let base = state.config.actor_url(""); // ".../users/"
     let mut names = Vec::new();
     for field in ["to", "cc", "bto", "bcc", "audience"] {
@@ -166,11 +169,11 @@ async fn resolve_local_recipients(state: &AppState, activity: &IncomingActivity)
 
     let mut resolved = Vec::new();
     for name in names {
-        if !resolved.contains(&name) && state.actors.get(&name).await.is_some() {
+        if !resolved.contains(&name) && state.actors.get(&name).await?.is_some() {
             resolved.push(name);
         }
     }
-    resolved
+    Ok(resolved)
 }
 
 /// Collect the trailing `{name}` of any addressing value that is one of our
