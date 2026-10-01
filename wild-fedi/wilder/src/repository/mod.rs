@@ -10,7 +10,9 @@ pub mod postgres;
 
 use async_trait::async_trait;
 use serde_json::Value;
+use uuid::Uuid;
 
+use crate::domain::Account;
 use crate::vocab::ActorType;
 
 /// A locally-hosted actor: the parts we persist. A richer server would attach
@@ -59,4 +61,16 @@ pub trait ActivityRepository: Send + Sync {
     async fn append_outbox(&self, username: &str, activity: Value) -> anyhow::Result<()>;
     async fn outbox(&self, username: &str) -> anyhow::Result<Vec<Value>>;
     async fn record_inbox(&self, username: &str, activity: Value) -> anyhow::Result<()>;
+}
+
+/// Accounts: credentials, roles, and who provisioned whom.
+#[async_trait]
+pub trait AccountRepository: Send + Sync {
+    async fn by_username(&self, username: &str) -> anyhow::Result<Option<Account>>;
+    async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<Account>>;
+    async fn insert(&self, account: &Account) -> anyhow::Result<()>;
+    /// Total account count — used to gate first-run school bootstrap.
+    async fn count(&self) -> anyhow::Result<usize>;
+    /// Accounts a given school created (for its admin roster view).
+    async fn list_created_by(&self, school_id: Uuid) -> anyhow::Result<Vec<Account>>;
 }

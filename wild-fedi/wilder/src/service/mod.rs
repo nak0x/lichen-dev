@@ -3,11 +3,15 @@
 //! is write-side (apply inbound activities), and `handlers` holds the per-verb
 //! Strategy implementations the inbox service dispatches to.
 
+pub mod account_service;
 pub mod actor_service;
+pub mod auth_service;
 pub mod handlers;
 pub mod inbox_service;
 pub mod publish_service;
 
+pub use account_service::AccountService;
 pub use actor_service::ActorService;
+pub use auth_service::AuthService;
 pub use inbox_service::InboxService;
 pub use publish_service::PublishService;

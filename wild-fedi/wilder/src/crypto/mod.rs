@@ -8,6 +8,7 @@
 
 pub mod http_signature;
 pub mod keypair;
+pub mod password;
 
 pub use http_signature::{SignatureHeader, Signer, verify};
 pub use keypair::KeyPair;

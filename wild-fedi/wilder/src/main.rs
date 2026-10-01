@@ -5,8 +5,10 @@
 //! implementations. It wires trait objects together and starts the two runtimes
 //! that make up the server — the HTTP listener and the background worker pool.
 
+mod cache;
 mod config;
 mod crypto;
+mod domain;
 mod error;
 mod federation;
 mod processor;
@@ -22,6 +24,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use tracing_subscriber::EnvFilter;
 
+use crate::cache::SessionStore;
 use crate::config::AppConfig;
 use crate::crypto::KeyPair;
 use crate::federation::FederationClient;
@@ -29,8 +32,10 @@ use crate::processor::AppJobProcessor;
 use crate::queue::redis::build_pool;
 use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
-use crate::repository::{ActivityRepository, ActorRepository, FollowerRepository, LocalActor};
-use crate::service::{ActorService, InboxService, PublishService};
+use crate::repository::{
+    AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, LocalActor,
+};
+use crate::service::{AccountService, ActorService, AuthService, InboxService, PublishService};
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
 
@@ -65,12 +70,22 @@ async fn main() -> anyhow::Result<()> {
     let actors: Arc<dyn ActorRepository> = store.clone();
     let followers: Arc<dyn FollowerRepository> = store.clone();
     let activities: Arc<dyn ActivityRepository> = store.clone();
+    let accounts: Arc<dyn AccountRepository> = store.clone();
 
     // --- work queue: durable Redis Stream; build the producer side first ---
     let redis = build_pool(&config.redis_url, config.worker_count + 16)
         .context("building Redis pool")?;
     let queue: Arc<dyn JobQueue> =
         Arc::new(RedisQueue::new(redis.clone(), JOB_STREAM, config.queue_capacity));
+
+    // --- identity: Redis sessions + argon2 auth + account provisioning ---
+    let sessions = Arc::new(SessionStore::new(redis.clone()));
+    let auth = Arc::new(AuthService::new(Arc::clone(&accounts), Arc::clone(&sessions)));
+    let account_service = Arc::new(AccountService::new(
+        Arc::clone(&config),
+        Arc::clone(&actors),
+        Arc::clone(&accounts),
+    ));
 
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
     // this is idempotent — see `seed_demo_actor`). Publishes through the same
@@ -127,6 +142,8 @@ async fn main() -> anyhow::Result<()> {
         actor_service,
         federation,
         queue,
+        auth,
+        account_service,
     };
     let app = web::router(state);
 

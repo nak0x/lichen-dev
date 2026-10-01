@@ -4,13 +4,13 @@ use crate::config::AppConfig;
 use crate::federation::FederationClient;
 use crate::queue::JobQueue;
 use crate::repository::ActorRepository;
-use crate::service::ActorService;
+use crate::service::{AccountService, ActorService, AuthService};
 
 /// The dependency container handed to every axum handler.
 ///
 /// Cloning it is cheap — every field is an `Arc`. Handlers depend on the trait
-/// objects here (`dyn ActorRepository`, `dyn JobQueue`), not concrete types, so
-/// the wiring in `main` is the only place that knows the implementations.
+/// objects and services here, not concrete types, so the wiring in `main` is the
+/// only place that knows the implementations.
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<AppConfig>,
@@ -18,4 +18,7 @@ pub struct AppState {
     pub actor_service: Arc<ActorService>,
     pub federation: Arc<FederationClient>,
     pub queue: Arc<dyn JobQueue>,
+    // --- identity (Phase 1) ---
+    pub auth: Arc<AuthService>,
+    pub account_service: Arc<AccountService>,
 }

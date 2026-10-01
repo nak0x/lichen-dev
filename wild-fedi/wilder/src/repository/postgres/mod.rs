@@ -3,6 +3,7 @@
 //! aggregate), mirroring how `InMemoryStore` implements them all — the
 //! composition root picks which one to wire in.
 
+mod accounts;
 mod activities;
 mod actors;
 mod followers;

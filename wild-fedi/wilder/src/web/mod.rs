@@ -3,6 +3,9 @@
 //! content-negotiate on.
 
 mod actor;
+mod api;
+pub mod cookie;
+pub mod extract;
 mod inbox;
 mod wellknown;
 
@@ -18,6 +21,7 @@ use crate::state::AppState;
 /// Build the router. Note axum 0.8 path params use `{name}`, not the old `:name`.
 pub fn router(state: AppState) -> Router {
     Router::new()
+        // --- server-to-server: ActivityPub (README §4, Path B) ---
         .route("/users/{name}", get(actor::actor))
         .route("/users/{name}/inbox", post(inbox::inbox))
         .route("/users/{name}/outbox", get(actor::outbox))
@@ -26,6 +30,8 @@ pub fn router(state: AppState) -> Router {
         .route("/.well-known/webfinger", get(wellknown::webfinger))
         .route("/.well-known/nodeinfo", get(wellknown::nodeinfo_discovery))
         .route("/nodeinfo/2.1", get(wellknown::nodeinfo))
+        // --- client-to-server: the app's REST API ---
+        .nest("/api/v1", api::routes())
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
