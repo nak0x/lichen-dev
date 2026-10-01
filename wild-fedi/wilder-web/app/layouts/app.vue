@@ -18,6 +18,8 @@ async function onLogout() {
         <NuxtLink to="/moi" class="brand">Wilder <span>· espace</span></NuxtLink>
         <nav>
           <NuxtLink to="/moi">Mon espace</NuxtLink>
+          <NuxtLink to="/moi/feed">Mon fil</NuxtLink>
+          <NuxtLink to="/groupes">Groupes</NuxtLink>
           <NuxtLink to="/">Fil fédéré</NuxtLink>
           <NuxtLink v-if="isSchool" to="/ecole">École</NuxtLink>
           <span v-if="user" class="who">{{ user.display_name || user.username }}</span>

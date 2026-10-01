@@ -3,7 +3,7 @@
 //! an extractor means a handler that names `CurrentUser` *cannot* run
 //! unauthenticated — the type system enforces the guard.
 
-use axum::extract::FromRequestParts;
+use axum::extract::{FromRequestParts, OptionalFromRequestParts};
 use axum::http::request::Parts;
 
 use crate::domain::{Account, Role};
@@ -33,6 +33,24 @@ impl FromRequestParts<AppState> for CurrentUser {
     }
 }
 
+/// Optional authentication: `Some` when a valid session is present, `None` for
+/// an anonymous request. Lets an endpoint serve a public view while still
+/// personalising it for signed-in callers (e.g. a group page's join button).
+impl OptionalFromRequestParts<AppState> for CurrentUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        match <CurrentUser as FromRequestParts<AppState>>::from_request_parts(parts, state).await {
+            Ok(user) => Ok(Some(user)),
+            // No or invalid session → anonymous, not an error.
+            Err(_) => Ok(None),
+        }
+    }
+}
+
 /// A `CurrentUser` additionally proven to be a school. Handlers that administer
 /// the instance name this type and get the 403 for free.
 pub struct SchoolUser(pub Account);
@@ -44,7 +62,10 @@ impl FromRequestParts<AppState> for SchoolUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let CurrentUser(account) = CurrentUser::from_request_parts(parts, state).await?;
+        // Fully qualified: CurrentUser implements both FromRequestParts and
+        // OptionalFromRequestParts, so the bare method name is ambiguous.
+        let CurrentUser(account) =
+            <CurrentUser as FromRequestParts<AppState>>::from_request_parts(parts, state).await?;
         if account.role == Role::School {
             Ok(SchoolUser(account))
         } else {

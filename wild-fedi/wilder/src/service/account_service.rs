@@ -68,6 +68,21 @@ impl AccountService {
         self.provision(Role::Student, input, Some(creator.id)).await
     }
 
+    /// A school provisions a capture station (a `Service` actor). Its posts feed
+    /// the "captured" view. Same authorization as student creation.
+    pub async fn create_station(
+        &self,
+        creator: &Account,
+        input: NewAccount,
+    ) -> Result<Account, AppError> {
+        if !creator.role.can_administer_instance() {
+            return Err(AppError::Forbidden(
+                "only a school may create accounts".to_string(),
+            ));
+        }
+        self.provision(Role::Service, input, Some(creator.id)).await
+    }
+
     /// Shared creation path: validate, mint actor + keypair, hash password, persist.
     async fn provision(
         &self,
@@ -131,8 +146,9 @@ impl AccountService {
 }
 
 /// Usernames become part of actor URLs and WebFinger handles, so constrain them
-/// to a safe, predictable shape rather than trusting arbitrary input.
-fn normalise_username(raw: &str) -> Result<String, AppError> {
+/// to a safe, predictable shape rather than trusting arbitrary input. Shared with
+/// group creation (group slugs are usernames too).
+pub(crate) fn normalise_username(raw: &str) -> Result<String, AppError> {
     let name = raw.trim().to_lowercase();
     let valid = !name.is_empty()
         && name.len() <= 32

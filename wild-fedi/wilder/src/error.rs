@@ -21,6 +21,14 @@ pub enum AppError {
     Internal(#[from] anyhow::Error),
 }
 
+/// JSON (de)serialisation failures are internal errors, not client faults, so
+/// `?` on a `serde_json` call inside a handler/service maps straight to 500.
+impl From<serde_json::Error> for AppError {
+    fn from(e: serde_json::Error) -> Self {
+        AppError::Internal(e.into())
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {

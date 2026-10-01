@@ -6,12 +6,18 @@
 pub mod account_service;
 pub mod actor_service;
 pub mod auth_service;
+pub mod feed_service;
+pub mod group_service;
 pub mod handlers;
 pub mod inbox_service;
+pub mod post_service;
 pub mod publish_service;
 
 pub use account_service::AccountService;
 pub use actor_service::ActorService;
 pub use auth_service::AuthService;
+pub use feed_service::FeedService;
+pub use group_service::GroupService;
 pub use inbox_service::InboxService;
+pub use post_service::PostService;
 pub use publish_service::PublishService;

@@ -2,6 +2,8 @@
 //! cache-miss, not data loss. Sessions live here (they expire anyway); later
 //! phases add feeds, the captured index, remote-actor caching and rate limits.
 
+pub mod feed;
 pub mod session;
 
+pub use feed::LastVisitStore;
 pub use session::SessionStore;

@@ -9,10 +9,11 @@ pub mod memory;
 pub mod postgres;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::domain::Account;
+use crate::domain::{Account, Group, Member, MembershipRole, Post};
 use crate::vocab::ActorType;
 
 /// A locally-hosted actor: the parts we persist. A richer server would attach
@@ -73,4 +74,53 @@ pub trait AccountRepository: Send + Sync {
     async fn count(&self) -> anyhow::Result<usize>;
     /// Accounts a given school created (for its admin roster view).
     async fn list_created_by(&self, school_id: Uuid) -> anyhow::Result<Vec<Account>>;
+}
+
+/// Groups and their memberships. Kept in one trait because the two are always
+/// manipulated together (creating a group seeds its first membership).
+#[async_trait]
+pub trait GroupRepository: Send + Sync {
+    async fn insert(&self, group: &Group) -> anyhow::Result<()>;
+    async fn by_username(&self, username: &str) -> anyhow::Result<Option<Group>>;
+    async fn all(&self) -> anyhow::Result<Vec<Group>>;
+    /// Groups an account belongs to.
+    async fn for_account(&self, account_id: Uuid) -> anyhow::Result<Vec<Group>>;
+
+    async fn add_member(
+        &self,
+        group_username: &str,
+        account_id: Uuid,
+        role: MembershipRole,
+    ) -> anyhow::Result<()>;
+    async fn remove_member(&self, group_username: &str, account_id: Uuid) -> anyhow::Result<()>;
+    async fn members(&self, group_username: &str) -> anyhow::Result<Vec<Member>>;
+    async fn role_of(
+        &self,
+        group_username: &str,
+        account_id: Uuid,
+    ) -> anyhow::Result<Option<MembershipRole>>;
+}
+
+/// Posts: the queryable read-model powering feeds, filtering and group views.
+#[async_trait]
+pub trait PostRepository: Send + Sync {
+    async fn insert(&self, post: &Post) -> anyhow::Result<()>;
+    /// Posts in a group, optionally filtered to a single tag, newest first.
+    async fn in_group(
+        &self,
+        group_username: &str,
+        tag: Option<&str>,
+        limit: i64,
+    ) -> anyhow::Result<Vec<Post>>;
+    /// Group posts since a timestamp, across several groups — the personal feed.
+    async fn in_groups_since(
+        &self,
+        group_usernames: &[String],
+        since: DateTime<Utc>,
+        limit: i64,
+    ) -> anyhow::Result<Vec<Post>>;
+    /// Posts whose author is a `Service` actor — the "captured" feed. Scoped to a
+    /// group when given, else instance-wide.
+    async fn captured(&self, group_username: Option<&str>, limit: i64)
+    -> anyhow::Result<Vec<Post>>;
 }

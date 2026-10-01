@@ -24,7 +24,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use tracing_subscriber::EnvFilter;
 
-use crate::cache::SessionStore;
+use crate::cache::{LastVisitStore, SessionStore};
 use crate::config::AppConfig;
 use crate::crypto::KeyPair;
 use crate::federation::FederationClient;
@@ -33,9 +33,13 @@ use crate::queue::redis::build_pool;
 use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
 use crate::repository::{
-    AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, LocalActor,
+    AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, GroupRepository,
+    LocalActor, PostRepository,
 };
-use crate::service::{AccountService, ActorService, AuthService, InboxService, PublishService};
+use crate::service::{
+    AccountService, ActorService, AuthService, FeedService, GroupService, InboxService,
+    PostService, PublishService,
+};
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
 
@@ -71,6 +75,8 @@ async fn main() -> anyhow::Result<()> {
     let followers: Arc<dyn FollowerRepository> = store.clone();
     let activities: Arc<dyn ActivityRepository> = store.clone();
     let accounts: Arc<dyn AccountRepository> = store.clone();
+    let groups: Arc<dyn GroupRepository> = store.clone();
+    let posts: Arc<dyn PostRepository> = store.clone();
 
     // --- work queue: durable Redis Stream; build the producer side first ---
     let redis = build_pool(&config.redis_url, config.worker_count + 16)
@@ -85,6 +91,27 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&config),
         Arc::clone(&actors),
         Arc::clone(&accounts),
+    ));
+
+    // --- groups, posts, feeds ---
+    let last_visit = Arc::new(LastVisitStore::new(redis.clone()));
+    let group_service = Arc::new(GroupService::new(
+        Arc::clone(&config),
+        Arc::clone(&actors),
+        Arc::clone(&groups),
+    ));
+    let post_service = Arc::new(PostService::new(
+        Arc::clone(&config),
+        Arc::clone(&groups),
+        Arc::clone(&followers),
+        Arc::clone(&posts),
+        Arc::clone(&activities),
+        Arc::clone(&queue),
+    ));
+    let feed_service = Arc::new(FeedService::new(
+        Arc::clone(&groups),
+        Arc::clone(&posts),
+        Arc::clone(&last_visit),
     ));
 
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
@@ -144,6 +171,9 @@ async fn main() -> anyhow::Result<()> {
         queue,
         auth,
         account_service,
+        group_service,
+        post_service,
+        feed_service,
     };
     let app = web::router(state);
 

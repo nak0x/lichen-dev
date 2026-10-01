@@ -52,6 +52,8 @@ impl ActivityDispatcher {
             handlers: HashMap::new(),
         };
         dispatcher.register(Box::new(FollowHandler));
+        dispatcher.register(Box::new(JoinHandler));
+        dispatcher.register(Box::new(LeaveHandler));
         dispatcher.register(Box::new(UndoHandler));
         dispatcher.register(Box::new(AcceptHandler));
         // Verbs we currently only record. Each is a seam to grow real behaviour
@@ -85,7 +87,52 @@ impl ActivityDispatcher {
     }
 }
 
-/// `Follow`: register the sender as a follower and acknowledge with `Accept`.
+/// Register the sender as a follower of `ctx.recipient` and send back an Accept.
+/// `Follow` (following an actor's timeline) and `Join` (joining a group) are the
+/// same handshake on the wire, so both route through here.
+async fn accept_as_follower(ctx: &HandlerContext, raw: &Value, verb: &str) -> anyhow::Result<()> {
+    let follower = ctx.federation.fetch_actor(&ctx.sender_id).await?;
+    // Deliver the Accept to the *personal* inbox; store the sharedInbox (when
+    // advertised) as the fan-out target for our future posts.
+    let personal_inbox = follower.inbox.clone();
+    let delivery_inbox = follower
+        .endpoints
+        .and_then(|e| e.shared_inbox)
+        .unwrap_or_else(|| personal_inbox.clone());
+    ctx.followers
+        .add(
+            &ctx.recipient,
+            Follower {
+                actor_id: ctx.sender_id.clone(),
+                inbox: delivery_inbox,
+            },
+        )
+        .await?;
+
+    // Echo the original activity as the Accept's object (the shape peers expect),
+    // delivered as a separate, independently-retryable job.
+    let accept = Activity {
+        context: vocab::activity_context(),
+        kind: "Accept".to_string(),
+        id: ctx.config.activity_url(&Uuid::new_v4().to_string()),
+        actor: ctx.config.actor_url(&ctx.recipient),
+        to: vec![ctx.sender_id.clone()],
+        cc: vec![],
+        published: None,
+        object: raw.clone(),
+    };
+    ctx.queue
+        .enqueue(Job::Deliver {
+            sender: ctx.recipient.clone(),
+            inbox_url: personal_inbox,
+            activity: serde_json::to_value(&accept)?,
+        })
+        .await;
+    tracing::info!(follower = %ctx.sender_id, actor = %ctx.recipient, verb, "accepted follow/join");
+    Ok(())
+}
+
+/// `Follow`: register the sender as a follower of an actor.
 struct FollowHandler;
 
 #[async_trait]
@@ -93,61 +140,57 @@ impl ActivityHandler for FollowHandler {
     fn verb(&self) -> &'static str {
         "Follow"
     }
-
     async fn handle(
         &self,
         ctx: &HandlerContext,
         _activity: &IncomingActivity,
         raw: &Value,
     ) -> anyhow::Result<()> {
-        // Resolve the follower by fetching their actor document.
-        let follower = ctx.federation.fetch_actor(&ctx.sender_id).await?;
-        // A directed Accept always goes to the follower's *personal* inbox.
-        let personal_inbox = follower.inbox.clone();
-        // But for future fan-out of our own posts we store their sharedInbox
-        // when advertised: one POST there reaches all their users on that
-        // server, instead of one POST per follower.
-        let delivery_inbox = follower
-            .endpoints
-            .and_then(|e| e.shared_inbox)
-            .unwrap_or_else(|| personal_inbox.clone());
-        ctx.followers
-            .add(
-                &ctx.recipient,
-                Follower {
-                    actor_id: ctx.sender_id.clone(),
-                    inbox: delivery_inbox,
-                },
-            )
-            .await?;
+        accept_as_follower(ctx, raw, "Follow").await
+    }
+}
 
-        // Acknowledge with an Accept that echoes the original Follow as its
-        // object (the shape Mastodon and friends expect), and enqueue delivery
-        // so the outbound POST is a separate, independently-retryable job.
-        let accept = Activity {
-            context: vocab::activity_context(),
-            kind: "Accept".to_string(),
-            id: ctx.config.activity_url(&Uuid::new_v4().to_string()),
-            actor: ctx.config.actor_url(&ctx.recipient),
-            to: vec![ctx.sender_id.clone()],
-            cc: vec![],
-            published: None,
-            object: raw.clone(),
-        };
-        ctx.queue
-            .enqueue(Job::Deliver {
-                sender: ctx.recipient.clone(),
-                inbox_url: personal_inbox,
-                activity: serde_json::to_value(&accept)?,
-            })
-            .await;
-        tracing::info!(follower = %ctx.sender_id, actor = %ctx.recipient, "accepted Follow");
+/// `Join`: a remote actor joins one of our groups. Modelled as becoming a
+/// follower of the group actor, so group posts reach them.
+struct JoinHandler;
+
+#[async_trait]
+impl ActivityHandler for JoinHandler {
+    fn verb(&self) -> &'static str {
+        "Join"
+    }
+    async fn handle(
+        &self,
+        ctx: &HandlerContext,
+        _activity: &IncomingActivity,
+        raw: &Value,
+    ) -> anyhow::Result<()> {
+        accept_as_follower(ctx, raw, "Join").await
+    }
+}
+
+/// `Leave`: the inverse of Join — drop the sender as a follower of the group.
+struct LeaveHandler;
+
+#[async_trait]
+impl ActivityHandler for LeaveHandler {
+    fn verb(&self) -> &'static str {
+        "Leave"
+    }
+    async fn handle(
+        &self,
+        ctx: &HandlerContext,
+        _activity: &IncomingActivity,
+        _raw: &Value,
+    ) -> anyhow::Result<()> {
+        ctx.followers.remove(&ctx.recipient, &ctx.sender_id).await?;
+        tracing::info!(actor = %ctx.sender_id, group = %ctx.recipient, "left group via Leave");
         Ok(())
     }
 }
 
-/// `Undo`: reverse a prior activity. We act on `Undo(Follow)` (unfollow); other
-/// undos are logged and ignored.
+/// `Undo`: reverse a prior activity. We act on `Undo(Follow)` and `Undo(Join)`
+/// (both drop the follower); other undos are logged and ignored.
 struct UndoHandler;
 
 #[async_trait]
@@ -167,9 +210,9 @@ impl ActivityHandler for UndoHandler {
             .as_ref()
             .and_then(|o| o.get("type"))
             .and_then(Value::as_str);
-        if inner_type == Some("Follow") {
+        if matches!(inner_type, Some("Follow") | Some("Join")) {
             ctx.followers.remove(&ctx.recipient, &ctx.sender_id).await?;
-            tracing::info!(follower = %ctx.sender_id, "removed follower via Undo(Follow)");
+            tracing::info!(follower = %ctx.sender_id, ?inner_type, "removed follower via Undo");
         } else {
             tracing::info!(?inner_type, "Undo of unhandled activity; ignoring");
         }

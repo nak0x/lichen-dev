@@ -7,6 +7,8 @@ mod accounts;
 mod activities;
 mod actors;
 mod followers;
+mod groups;
+mod posts;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;

@@ -12,6 +12,7 @@ use crate::web::extract::SchoolUser;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/accounts/students", post(create_student))
+        .route("/accounts/stations", post(create_station))
         .route("/accounts", get(list_accounts))
 }
 
@@ -25,6 +26,27 @@ async fn create_student(
     let account = st
         .account_service
         .create_student(
+            &school,
+            NewAccount {
+                username: body.username,
+                password: body.password,
+                display_name: body.display_name,
+                email: body.email,
+            },
+        )
+        .await?;
+    Ok(Json(account.into()))
+}
+
+/// A school provisions a capture station (a `Service` actor).
+async fn create_station(
+    SchoolUser(school): SchoolUser,
+    State(st): State<AppState>,
+    Json(body): Json<NewAccountInput>,
+) -> Result<Json<AccountView>, AppError> {
+    let account = st
+        .account_service
+        .create_station(
             &school,
             NewAccount {
                 username: body.username,

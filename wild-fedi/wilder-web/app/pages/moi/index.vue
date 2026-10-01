@@ -26,12 +26,12 @@ useHead({ title: 'Mon espace — Wilder' })
       <div v-if="user?.email"><dt>Courriel</dt><dd>{{ user.email }}</dd></div>
     </dl>
 
-    <h2>À venir dans cet espace</h2>
+    <h2>Raccourcis</h2>
     <div class="soon">
-      <article class="card"><h3>Notes personnelles</h3><p>Vos notes privées, visibles de vous seul.</p></article>
-      <article class="card"><h3>Recherche personnelle</h3><p>Vos documents de recherche.</p></article>
-      <article class="card"><h3>Clé de détermination</h3><p>Identifier une espèce du général au précis.</p></article>
-      <article class="card"><h3>Mon fil</h3><p>Ce qui a changé depuis votre dernière visite.</p></article>
+      <NuxtLink class="card" to="/moi/feed"><h3>Mon fil →</h3><p>Ce qui a changé dans vos groupes depuis votre dernière visite.</p></NuxtLink>
+      <NuxtLink class="card" to="/groupes"><h3>Groupes →</h3><p>Rejoindre un cercle d'étude ou en créer un.</p></NuxtLink>
+      <article class="card soon-item"><h3>Notes personnelles</h3><p>À venir : vos notes privées.</p></article>
+      <article class="card soon-item"><h3>Clé de détermination</h3><p>À venir : identifier une espèce du général au précis.</p></article>
     </div>
   </div>
 </template>
