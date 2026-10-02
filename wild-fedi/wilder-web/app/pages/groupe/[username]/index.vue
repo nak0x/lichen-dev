@@ -12,7 +12,7 @@ const { data: group, refresh: refreshGroup } = await useAsyncData(`group-${usern
   authFetch<any>(`/api/backend/groups/${username}`)
 )
 
-const tab = ref<'posts' | 'captured'>('posts')
+const tab = ref<'posts' | 'captured' | 'gallery'>('posts')
 const tag = ref('')
 
 const { data: posts, refresh: refreshPosts } = await useAsyncData(
@@ -26,10 +26,31 @@ const { data: posts, refresh: refreshPosts } = await useAsyncData(
 const { data: captured, refresh: refreshCaptured } = await useAsyncData(`captured-${username}`, () =>
   authFetch<any[]>(`/api/backend/groups/${username}/captured`)
 )
+const { data: pictures, refresh: refreshPictures } = await useAsyncData(`pics-${username}`, () =>
+  authFetch<any[]>(`/api/backend/groups/${username}/pictures`)
+)
 
-// Composer
+// Composer, with optional image attachment.
 const draft = reactive({ content: '', tags: '' })
+const attached = ref<{ id: string; url: string } | null>(null)
+const uploading = ref(false)
 const posting = ref(false)
+
+async function onPickImage(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    attached.value = await $fetch<{ id: string; url: string }>('/api/backend/media', {
+      method: 'POST',
+      body: file,
+      headers: { 'content-type': file.type }
+    })
+  } finally {
+    uploading.value = false
+  }
+}
+
 async function publish() {
   posting.value = true
   try {
@@ -38,12 +59,14 @@ async function publish() {
       body: {
         group: username,
         content: draft.content,
-        tags: draft.tags.split(/[\s,]+/).filter(Boolean)
+        tags: draft.tags.split(/[\s,]+/).filter(Boolean),
+        media: attached.value ? [attached.value.id] : []
       }
     })
     draft.content = ''
     draft.tags = ''
-    await Promise.all([refreshPosts(), refreshCaptured()])
+    attached.value = null
+    await Promise.all([refreshPosts(), refreshCaptured(), refreshPictures()])
   } finally {
     posting.value = false
   }
@@ -77,8 +100,16 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
     <!-- Composer: members only -->
     <form v-if="group.is_member" class="composer card" @submit.prevent="publish">
       <textarea v-model="draft.content" rows="3" placeholder="Partager une observation…" required />
+      <figure v-if="attached" class="preview">
+        <img :src="mediaSrc(attached.url)" alt="aperçu" />
+        <button type="button" class="btn ghost sm" @click="attached = null">Retirer</button>
+      </figure>
       <div class="composer-foot">
         <input v-model="draft.tags" type="text" placeholder="étiquettes : castor nuit" />
+        <label class="imgbtn btn ghost sm">
+          {{ uploading ? '…' : (attached ? 'Image ✓' : 'Image') }}
+          <input type="file" accept="image/*" hidden @change="onPickImage" />
+        </label>
         <button class="btn" type="submit" :disabled="posting || !draft.content">{{ posting ? '…' : 'Publier' }}</button>
       </div>
     </form>
@@ -86,6 +117,7 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
     <!-- Tabs -->
     <div class="tabs">
       <button :class="['tabbtn', { on: tab === 'posts' }]" @click="tab = 'posts'">Observations</button>
+      <button :class="['tabbtn', { on: tab === 'gallery' }]" @click="tab = 'gallery'">Galerie</button>
       <button :class="['tabbtn', { on: tab === 'captured' }]" @click="tab = 'captured'">Captations</button>
     </div>
 
@@ -98,6 +130,16 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
         <PostItem v-for="p in posts" :key="p.id" :post="p" />
       </div>
       <div v-else class="empty">Aucune observation{{ tag ? ' pour cette étiquette' : '' }}.</div>
+    </template>
+
+    <template v-else-if="tab === 'gallery'">
+      <div v-if="pictures && pictures.length" class="gallery">
+        <figure v-for="(pic, i) in pictures" :key="i">
+          <img :src="mediaSrc(pic.url)" :alt="`photo de ${pic.author}`" loading="lazy" />
+          <figcaption>{{ pic.author }}</figcaption>
+        </figure>
+      </div>
+      <div v-else class="empty">Aucune image partagée.</div>
     </template>
 
     <template v-else>
@@ -126,4 +168,11 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
 .tabbtn.on { color: var(--forest); border-bottom-color: var(--forest); font-weight: 600; }
 .filter { display: flex; gap: .5rem; margin-bottom: 1rem; }
 .filter input { flex: 1; }
+.imgbtn { flex: none; cursor: pointer; }
+.preview { margin: .6rem 0 0; display: flex; align-items: flex-start; gap: .6rem; }
+.preview img { width: 8rem; height: 8rem; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius); }
+.gallery { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); }
+.gallery figure { margin: 0; }
+.gallery img { width: 100%; height: 8rem; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+.gallery figcaption { font-size: .72rem; color: var(--ink-soft); margin-top: .2rem; }
 </style>

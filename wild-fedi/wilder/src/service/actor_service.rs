@@ -51,6 +51,9 @@ impl ActorService {
             outbox: self.config.outbox_url(&actor.username),
             followers: self.config.followers_url(&actor.username),
             following: None,
+            icon: actor.icon_url.as_ref().map(|url| {
+                json!({ "type": "Image", "url": url })
+            }),
             public_key: PublicKey {
                 id: self.config.key_id(&actor.username),
                 owner: id,

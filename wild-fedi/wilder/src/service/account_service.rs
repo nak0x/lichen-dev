@@ -116,6 +116,7 @@ impl AccountService {
                 summary: None,
                 private_key_pem: keypair.private_pem().map_err(AppError::Internal)?,
                 public_key_pem: keypair.public_pem().map_err(AppError::Internal)?,
+                icon_url: None,
             })
             .await
             .map_err(AppError::Internal)?;

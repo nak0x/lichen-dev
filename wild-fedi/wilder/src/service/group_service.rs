@@ -48,6 +48,7 @@ impl GroupService {
                 summary: input.summary.clone().or_else(|| input.subject.clone()),
                 private_key_pem: keypair.private_pem()?,
                 public_key_pem: keypair.public_pem()?,
+                icon_url: None,
             })
             .await?;
 

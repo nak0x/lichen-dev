@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::domain::{Account, Group, Member, MembershipRole, Post};
+use crate::domain::{Account, Group, Member, MediaRef, MembershipRole, Post};
 use crate::vocab::ActorType;
 
 /// A locally-hosted actor: the parts we persist. A richer server would attach
@@ -27,6 +27,8 @@ pub struct LocalActor {
     pub summary: Option<String>,
     pub private_key_pem: String,
     pub public_key_pem: String,
+    /// Avatar URL (ActivityPub `icon`), set once the actor uploads one.
+    pub icon_url: Option<String>,
 }
 
 /// A remote follower we deliver to. We cache the resolved `inbox` so we don't
@@ -47,6 +49,16 @@ pub trait ActorRepository: Send + Sync {
     async fn get(&self, username: &str) -> anyhow::Result<Option<LocalActor>>;
     async fn insert(&self, actor: LocalActor) -> anyhow::Result<()>;
     async fn count(&self) -> anyhow::Result<usize>;
+    /// Set the actor's avatar URL (profile avatar upload).
+    async fn set_icon(&self, username: &str, icon_url: &str) -> anyhow::Result<()>;
+    /// Update editable profile fields (display name, bio). `None` leaves a field
+    /// unchanged.
+    async fn update_bio(
+        &self,
+        username: &str,
+        display_name: Option<&str>,
+        summary: Option<&str>,
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -123,4 +135,11 @@ pub trait PostRepository: Send + Sync {
     /// group when given, else instance-wide.
     async fn captured(&self, group_username: Option<&str>, limit: i64)
     -> anyhow::Result<Vec<Post>>;
+}
+
+/// Media metadata (the bytes live in the `MediaStore`).
+#[async_trait]
+pub trait MediaRepository: Send + Sync {
+    async fn insert(&self, media: &MediaRef) -> anyhow::Result<()>;
+    async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<MediaRef>>;
 }

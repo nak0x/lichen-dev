@@ -5,7 +5,8 @@ use crate::federation::FederationClient;
 use crate::queue::JobQueue;
 use crate::repository::ActorRepository;
 use crate::service::{
-    AccountService, ActorService, AuthService, FeedService, GroupService, PostService,
+    AccountService, ActorService, AuthService, FeedService, GroupService, MediaService,
+    PostService,
 };
 
 /// The dependency container handed to every axum handler.
@@ -27,4 +28,6 @@ pub struct AppState {
     pub group_service: Arc<GroupService>,
     pub post_service: Arc<PostService>,
     pub feed_service: Arc<FeedService>,
+    // --- media (Phase 3) ---
+    pub media_service: Arc<MediaService>,
 }

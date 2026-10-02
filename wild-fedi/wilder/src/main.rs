@@ -11,6 +11,7 @@ mod crypto;
 mod domain;
 mod error;
 mod federation;
+mod media;
 mod processor;
 mod queue;
 mod repository;
@@ -28,17 +29,18 @@ use crate::cache::{LastVisitStore, SessionStore};
 use crate::config::AppConfig;
 use crate::crypto::KeyPair;
 use crate::federation::FederationClient;
+use crate::media::{FilesystemMedia, MediaStore, S3Media};
 use crate::processor::AppJobProcessor;
 use crate::queue::redis::build_pool;
 use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
 use crate::repository::{
     AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, GroupRepository,
-    LocalActor, PostRepository,
+    LocalActor, MediaRepository, PostRepository,
 };
 use crate::service::{
     AccountService, ActorService, AuthService, FeedService, GroupService, InboxService,
-    PostService, PublishService,
+    MediaService, PostService, PublishService,
 };
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
@@ -77,6 +79,21 @@ async fn main() -> anyhow::Result<()> {
     let accounts: Arc<dyn AccountRepository> = store.clone();
     let groups: Arc<dyn GroupRepository> = store.clone();
     let posts: Arc<dyn PostRepository> = store.clone();
+    let media_repo: Arc<dyn MediaRepository> = store.clone();
+
+    // --- object storage: MinIO by default, local filesystem when chosen ---
+    let media_store: Arc<dyn MediaStore> = match config.media_backend.as_str() {
+        "fs" => {
+            tracing::info!(root = %config.media_fs_root, "media backend: filesystem");
+            Arc::new(FilesystemMedia::new(&config.media_fs_root).await?)
+        }
+        _ => {
+            let s3 = S3Media::new(&config.s3);
+            s3.ensure_bucket().await.context("preparing object store")?;
+            tracing::info!(endpoint = %config.s3.endpoint, "media backend: S3/MinIO");
+            Arc::new(s3)
+        }
+    };
 
     // --- work queue: durable Redis Stream; build the producer side first ---
     let redis = build_pool(&config.redis_url, config.worker_count + 16)
@@ -106,12 +123,19 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&followers),
         Arc::clone(&posts),
         Arc::clone(&activities),
+        Arc::clone(&media_repo),
         Arc::clone(&queue),
     ));
     let feed_service = Arc::new(FeedService::new(
         Arc::clone(&groups),
         Arc::clone(&posts),
         Arc::clone(&last_visit),
+    ));
+    let media_service = Arc::new(MediaService::new(
+        Arc::clone(&config),
+        Arc::clone(&media_store),
+        Arc::clone(&media_repo),
+        Arc::clone(&actors),
     ));
 
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
@@ -174,6 +198,7 @@ async fn main() -> anyhow::Result<()> {
         group_service,
         post_service,
         feed_service,
+        media_service,
     };
     let app = web::router(state);
 
@@ -209,6 +234,7 @@ async fn seed_demo_actor(
             summary: Some("Observations naturalistes de la classe Castor.".to_string()),
             private_key_pem: keypair.private_pem()?,
             public_key_pem: keypair.public_pem()?,
+            icon_url: None,
         })
         .await?;
 

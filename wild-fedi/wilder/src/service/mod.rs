@@ -10,6 +10,7 @@ pub mod feed_service;
 pub mod group_service;
 pub mod handlers;
 pub mod inbox_service;
+pub mod media_service;
 pub mod post_service;
 pub mod publish_service;
 
@@ -19,5 +20,6 @@ pub use auth_service::AuthService;
 pub use feed_service::FeedService;
 pub use group_service::GroupService;
 pub use inbox_service::InboxService;
+pub use media_service::MediaService;
 pub use post_service::PostService;
 pub use publish_service::PublishService;

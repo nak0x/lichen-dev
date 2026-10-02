@@ -50,6 +50,9 @@ pub struct Actor {
     pub followers: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub following: Option<String>,
+    /// Avatar, as an AS `Image` icon object. Skipped when the actor has none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<Value>,
     pub public_key: PublicKey,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoints: Option<Endpoints>,

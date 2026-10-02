@@ -8,6 +8,7 @@ mod activities;
 mod actors;
 mod followers;
 mod groups;
+mod media;
 mod posts;
 
 use sqlx::PgPool;

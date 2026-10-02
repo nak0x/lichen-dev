@@ -15,6 +15,7 @@ pub fn routes() -> Router<AppState> {
         .route("/posts", post(create))
         .route("/groups/{username}/posts", get(group_posts))
         .route("/groups/{username}/captured", get(group_captured))
+        .route("/groups/{username}/pictures", get(group_pictures))
 }
 
 #[derive(Deserialize)]
@@ -24,6 +25,8 @@ struct NewPostInput {
     content: String,
     #[serde(default)]
     tags: Vec<String>,
+    #[serde(default)]
+    media: Vec<uuid::Uuid>,
 }
 
 /// Compose a post. Members post into a group; anyone posts to their own
@@ -41,10 +44,19 @@ async fn create(
                 group_username: body.group,
                 content: body.content,
                 tags: body.tags,
+                media: body.media,
             },
         )
         .await?;
     Ok(Json(post.into()))
+}
+
+/// A group's picture space: every image attached to its posts.
+async fn group_pictures(
+    State(st): State<AppState>,
+    Path(username): Path<String>,
+) -> Result<Json<Vec<serde_json::Value>>, AppError> {
+    Ok(Json(st.post_service.pictures(&username).await?))
 }
 
 #[derive(Deserialize)]

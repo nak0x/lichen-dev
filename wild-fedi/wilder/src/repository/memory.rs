@@ -44,6 +44,28 @@ impl ActorRepository for InMemoryStore {
     async fn count(&self) -> anyhow::Result<usize> {
         Ok(self.actors.read().await.len())
     }
+    async fn set_icon(&self, username: &str, icon_url: &str) -> anyhow::Result<()> {
+        if let Some(actor) = self.actors.write().await.get_mut(username) {
+            actor.icon_url = Some(icon_url.to_string());
+        }
+        Ok(())
+    }
+    async fn update_bio(
+        &self,
+        username: &str,
+        display_name: Option<&str>,
+        summary: Option<&str>,
+    ) -> anyhow::Result<()> {
+        if let Some(actor) = self.actors.write().await.get_mut(username) {
+            if let Some(n) = display_name {
+                actor.display_name = Some(n.to_string());
+            }
+            if let Some(s) = summary {
+                actor.summary = Some(s.to_string());
+            }
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -119,6 +141,7 @@ mod tests {
             summary: None,
             private_key_pem: "priv".into(),
             public_key_pem: "pub".into(),
+            icon_url: None,
         }
     }
 

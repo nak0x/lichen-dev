@@ -7,7 +7,9 @@ use crate::config::AppConfig;
 use crate::domain::{Account, NewPost, Post};
 use crate::error::AppError;
 use crate::queue::{Job, JobQueue};
-use crate::repository::{ActivityRepository, FollowerRepository, GroupRepository, PostRepository};
+use crate::repository::{
+    ActivityRepository, FollowerRepository, GroupRepository, MediaRepository, PostRepository,
+};
 use crate::vocab::{self, Activity, Object};
 
 /// Composing and publishing posts. One `create` call does three things that must
@@ -19,6 +21,7 @@ pub struct PostService {
     followers: Arc<dyn FollowerRepository>,
     posts: Arc<dyn PostRepository>,
     activities: Arc<dyn ActivityRepository>,
+    media: Arc<dyn MediaRepository>,
     queue: Arc<dyn JobQueue>,
 }
 
@@ -30,6 +33,7 @@ impl PostService {
         followers: Arc<dyn FollowerRepository>,
         posts: Arc<dyn PostRepository>,
         activities: Arc<dyn ActivityRepository>,
+        media: Arc<dyn MediaRepository>,
         queue: Arc<dyn JobQueue>,
     ) -> Self {
         Self {
@@ -38,6 +42,7 @@ impl PostService {
             followers,
             posts,
             activities,
+            media,
             queue,
         }
     }
@@ -64,6 +69,21 @@ impl PostService {
         let audience_followers = self.config.followers_url(&target);
         let object_id = self.config.object_url(&Uuid::new_v4().to_string());
 
+        // Resolve attached media to AS `Image` objects. Unknown/non-image ids are
+        // skipped rather than failing the whole post.
+        let mut attachment = Vec::new();
+        for media_id in &input.media {
+            if let Some(m) = self.media.by_id(*media_id).await?
+                && m.content_type.starts_with("image/")
+            {
+                attachment.push(serde_json::json!({
+                    "type": "Image",
+                    "mediaType": m.content_type,
+                    "url": self.config.media_url(&m.id.to_string()),
+                }));
+            }
+        }
+
         let note = Object {
             kind: "Note".to_string(),
             id: object_id.clone(),
@@ -72,7 +92,7 @@ impl PostService {
             published: Some(published.clone()),
             to: vec![vocab::PUBLIC.to_string()],
             cc: vec![audience_followers.clone()],
-            attachment: vec![],
+            attachment,
             tag: input
                 .tags
                 .iter()
@@ -135,6 +155,34 @@ impl PostService {
 
     pub async fn captured(&self, group_username: Option<&str>) -> Result<Vec<Post>, AppError> {
         Ok(self.posts.captured(group_username, 100).await?)
+    }
+
+    /// The group's picture space: every image attached to a group post, flattened
+    /// into `{ url, author, post_id }` entries, newest first.
+    pub async fn pictures(&self, group_username: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        let posts = self.posts.in_group(group_username, None, 200).await?;
+        let mut pics = Vec::new();
+        for post in posts {
+            let attachments = post
+                .activity
+                .get("object")
+                .and_then(|o| o.get("attachment"))
+                .and_then(|a| a.as_array())
+                .cloned()
+                .unwrap_or_default();
+            for att in attachments {
+                if att.get("type").and_then(|t| t.as_str()) == Some("Image")
+                    && let Some(url) = att.get("url").and_then(|u| u.as_str())
+                {
+                    pics.push(serde_json::json!({
+                        "url": url,
+                        "author": post.author_username,
+                        "post_id": post.id,
+                    }));
+                }
+            }
+        }
+        Ok(pics)
     }
 
     fn is_local(&self, actor_id: &str) -> bool {

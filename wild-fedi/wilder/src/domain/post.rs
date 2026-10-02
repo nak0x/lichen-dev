@@ -26,4 +26,6 @@ pub struct NewPost {
     pub group_username: Option<String>,
     pub content: String,
     pub tags: Vec<String>,
+    /// Ids of previously-uploaded images to attach (the picture space).
+    pub media: Vec<uuid::Uuid>,
 }

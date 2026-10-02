@@ -7,6 +7,7 @@ mod api;
 pub mod cookie;
 pub mod extract;
 mod inbox;
+mod media;
 mod wellknown;
 
 use axum::Router;
@@ -30,6 +31,8 @@ pub fn router(state: AppState) -> Router {
         .route("/.well-known/webfinger", get(wellknown::webfinger))
         .route("/.well-known/nodeinfo", get(wellknown::nodeinfo_discovery))
         .route("/nodeinfo/2.1", get(wellknown::nodeinfo))
+        // --- media bytes, served through wilder (public, cacheable) ---
+        .route("/media/{id}", get(media::serve))
         // --- client-to-server: the app's REST API ---
         .nest("/api/v1", api::routes())
         .layer(TraceLayer::new_for_http())

@@ -8,8 +8,8 @@ use crate::repository::{ActorRepository, LocalActor};
 impl ActorRepository for PgStore {
     async fn get(&self, username: &str) -> anyhow::Result<Option<LocalActor>> {
         let row = sqlx::query(
-            "SELECT username, kind, display_name, summary, private_key_pem, public_key_pem \
-             FROM actors WHERE username = $1",
+            "SELECT username, kind, display_name, summary, private_key_pem, public_key_pem, \
+                icon_url FROM actors WHERE username = $1",
         )
         .bind(username)
         .fetch_optional(self.pool())
@@ -22,6 +22,7 @@ impl ActorRepository for PgStore {
             summary: r.get("summary"),
             private_key_pem: r.get("private_key_pem"),
             public_key_pem: r.get("public_key_pem"),
+            icon_url: r.get("icon_url"),
         }))
     }
 
@@ -56,5 +57,33 @@ impl ActorRepository for PgStore {
             .await?;
         let n: i64 = row.get("n");
         Ok(n as usize)
+    }
+
+    async fn set_icon(&self, username: &str, icon_url: &str) -> anyhow::Result<()> {
+        sqlx::query("UPDATE actors SET icon_url = $2 WHERE username = $1")
+            .bind(username)
+            .bind(icon_url)
+            .execute(self.pool())
+            .await?;
+        Ok(())
+    }
+
+    async fn update_bio(
+        &self,
+        username: &str,
+        display_name: Option<&str>,
+        summary: Option<&str>,
+    ) -> anyhow::Result<()> {
+        // COALESCE keeps the existing value when a field is not supplied.
+        sqlx::query(
+            "UPDATE actors SET display_name = COALESCE($2, display_name), \
+                summary = COALESCE($3, summary) WHERE username = $1",
+        )
+        .bind(username)
+        .bind(display_name)
+        .bind(summary)
+        .execute(self.pool())
+        .await?;
+        Ok(())
     }
 }
