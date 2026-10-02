@@ -7,6 +7,7 @@ mod accounts;
 mod auth;
 mod feeds;
 mod groups;
+mod measurements;
 mod media;
 mod me;
 mod posts;
@@ -28,6 +29,7 @@ pub fn routes() -> Router<AppState> {
         .merge(feeds::routes())
         .merge(media::routes())
         .merge(me::routes())
+        .merge(measurements::routes())
 }
 
 /// Public projection of an account — everything the client may see, and nothing

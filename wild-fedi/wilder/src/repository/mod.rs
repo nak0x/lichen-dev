@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::domain::{Account, Group, Member, MediaRef, MembershipRole, Post};
+use crate::domain::{Account, Group, Measurement, Member, MediaRef, MembershipRole, Post};
 use crate::vocab::ActorType;
 
 /// A locally-hosted actor: the parts we persist. A richer server would attach
@@ -142,4 +142,13 @@ pub trait PostRepository: Send + Sync {
 pub trait MediaRepository: Send + Sync {
     async fn insert(&self, media: &MediaRef) -> anyhow::Result<()>;
     async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<MediaRef>>;
+}
+
+/// Environmental measurements — a group's numeric time series.
+#[async_trait]
+pub trait MeasurementRepository: Send + Sync {
+    async fn insert(&self, m: &Measurement) -> anyhow::Result<()>;
+    /// All of a group's readings, ordered by metric then time — the service
+    /// groups them into per-metric series for charting.
+    async fn for_group(&self, group_username: &str) -> anyhow::Result<Vec<Measurement>>;
 }

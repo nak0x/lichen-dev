@@ -36,11 +36,11 @@ use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
 use crate::repository::{
     AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, GroupRepository,
-    LocalActor, MediaRepository, PostRepository,
+    LocalActor, MeasurementRepository, MediaRepository, PostRepository,
 };
 use crate::service::{
     AccountService, ActorService, AuthService, FeedService, GroupService, InboxService,
-    MediaService, PostService, PublishService,
+    MeasurementService, MediaService, PostService, PublishService,
 };
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
@@ -80,6 +80,7 @@ async fn main() -> anyhow::Result<()> {
     let groups: Arc<dyn GroupRepository> = store.clone();
     let posts: Arc<dyn PostRepository> = store.clone();
     let media_repo: Arc<dyn MediaRepository> = store.clone();
+    let measurements: Arc<dyn MeasurementRepository> = store.clone();
 
     // --- object storage: MinIO by default, local filesystem when chosen ---
     let media_store: Arc<dyn MediaStore> = match config.media_backend.as_str() {
@@ -136,6 +137,10 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&media_store),
         Arc::clone(&media_repo),
         Arc::clone(&actors),
+    ));
+    let measurement_service = Arc::new(MeasurementService::new(
+        Arc::clone(&groups),
+        Arc::clone(&measurements),
     ));
 
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
@@ -199,6 +204,7 @@ async fn main() -> anyhow::Result<()> {
         post_service,
         feed_service,
         media_service,
+        measurement_service,
     };
     let app = web::router(state);
 

@@ -8,6 +8,7 @@ mod activities;
 mod actors;
 mod followers;
 mod groups;
+mod measurements;
 mod media;
 mod posts;
 

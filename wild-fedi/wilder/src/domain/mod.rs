@@ -5,10 +5,12 @@
 
 pub mod account;
 pub mod group;
+pub mod measurement;
 pub mod media;
 pub mod post;
 
 pub use account::{Account, NewAccount, Role};
 pub use group::{Group, Member, MembershipRole, NewGroup};
+pub use measurement::{Measurement, NewMeasurement};
 pub use media::MediaRef;
 pub use post::{NewPost, Post};

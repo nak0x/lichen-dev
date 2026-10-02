@@ -29,6 +29,27 @@ const { data: captured, refresh: refreshCaptured } = await useAsyncData(`capture
 const { data: pictures, refresh: refreshPictures } = await useAsyncData(`pics-${username}`, () =>
   authFetch<any[]>(`/api/backend/groups/${username}/pictures`)
 )
+const { data: series, refresh: refreshSeries } = await useAsyncData(`series-${username}`, () =>
+  authFetch<any[]>(`/api/backend/groups/${username}/measurements`)
+)
+
+// Measurement entry (members).
+const reading = reactive({ metric: '', value: '', unit: '' })
+const recording = ref(false)
+async function recordReading() {
+  if (!reading.metric || reading.value === '') return
+  recording.value = true
+  try {
+    await $fetch(`/api/backend/groups/${username}/measurements`, {
+      method: 'POST',
+      body: { metric: reading.metric, value: Number(reading.value), unit: reading.unit || undefined }
+    })
+    reading.value = ''
+    await refreshSeries()
+  } finally {
+    recording.value = false
+  }
+}
 
 // Composer, with optional image attachment.
 const draft = reactive({ content: '', tags: '' })
@@ -114,6 +135,25 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
       </div>
     </form>
 
+    <!-- Suivi chiffré : des graphiques seulement s'il y a des relevés -->
+    <section v-if="(series && series.length) || group.is_member" class="tracking">
+      <h2>Suivi de l'environnement</h2>
+
+      <form v-if="group.is_member" class="reading" @submit.prevent="recordReading">
+        <input v-model="reading.metric" type="text" placeholder="grandeur (température)" required />
+        <input v-model="reading.value" type="number" step="any" placeholder="valeur" required />
+        <input v-model="reading.unit" type="text" placeholder="unité (°C)" />
+        <button class="btn sm" type="submit" :disabled="recording">{{ recording ? '…' : 'Relever' }}</button>
+      </form>
+
+      <div v-if="series && series.length" class="charts">
+        <ClientOnly>
+          <MeasurementChart v-for="s in series" :key="s.metric" :series="s" />
+        </ClientOnly>
+      </div>
+      <div v-else class="empty">Aucun relevé numérique pour l'instant.</div>
+    </section>
+
     <!-- Tabs -->
     <div class="tabs">
       <button :class="['tabbtn', { on: tab === 'posts' }]" @click="tab = 'posts'">Observations</button>
@@ -175,4 +215,9 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
 .gallery figure { margin: 0; }
 .gallery img { width: 100%; height: 8rem; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
 .gallery figcaption { font-size: .72rem; color: var(--ink-soft); margin-top: .2rem; }
+.tracking { margin: 1.4rem 0; }
+.reading { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+.reading input { flex: 1 1 8rem; }
+.reading .btn { flex: none; }
+.charts { display: grid; gap: 1.2rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
 </style>
