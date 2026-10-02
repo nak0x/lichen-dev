@@ -13,7 +13,9 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::domain::{Account, Group, Measurement, Member, MediaRef, MembershipRole, Post};
+use crate::domain::{
+    Account, Group, Measurement, Member, MediaRef, MembershipRole, Note, NoteKind, Post, TaxonNode,
+};
 use crate::vocab::ActorType;
 
 /// A locally-hosted actor: the parts we persist. A richer server would attach
@@ -151,4 +153,29 @@ pub trait MeasurementRepository: Send + Sync {
     /// All of a group's readings, ordered by metric then time — the service
     /// groups them into per-metric series for charting.
     async fn for_group(&self, group_username: &str) -> anyhow::Result<Vec<Measurement>>;
+}
+
+/// Private personal documents (notes and research).
+#[async_trait]
+pub trait NoteRepository: Send + Sync {
+    async fn list(&self, owner: &str, kind: NoteKind) -> anyhow::Result<Vec<Note>>;
+    async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<Note>>;
+    async fn insert(&self, note: &Note) -> anyhow::Result<()>;
+    async fn update(
+        &self,
+        id: Uuid,
+        title: Option<&str>,
+        content: &str,
+    ) -> anyhow::Result<()>;
+    async fn delete(&self, id: Uuid) -> anyhow::Result<()>;
+}
+
+/// The determination-key taxonomy (curated reference data).
+#[async_trait]
+pub trait TaxonomyRepository: Send + Sync {
+    async fn roots(&self) -> anyhow::Result<Vec<TaxonNode>>;
+    async fn children(&self, parent_id: Uuid) -> anyhow::Result<Vec<TaxonNode>>;
+    async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<TaxonNode>>;
+    async fn count(&self) -> anyhow::Result<usize>;
+    async fn insert(&self, node: &TaxonNode) -> anyhow::Result<()>;
 }

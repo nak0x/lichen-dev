@@ -10,7 +10,9 @@ mod followers;
 mod groups;
 mod measurements;
 mod media;
+mod notes;
 mod posts;
+mod taxonomy;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;

@@ -107,9 +107,10 @@ useHead({ title: 'Mon espace — Wilder' })
     <h2>Raccourcis</h2>
     <div class="soon">
       <NuxtLink class="card" to="/moi/feed"><h3>Mon fil →</h3><p>Ce qui a changé dans vos groupes depuis votre dernière visite.</p></NuxtLink>
+      <NuxtLink class="card" to="/moi/notes"><h3>Mes notes →</h3><p>Vos notes privées, visibles de vous seul.</p></NuxtLink>
+      <NuxtLink class="card" to="/moi/recherche"><h3>Ma recherche →</h3><p>Vos documents de recherche personnels.</p></NuxtLink>
+      <NuxtLink class="card" to="/determiner"><h3>Clé de détermination →</h3><p>Identifier une espèce du général au précis.</p></NuxtLink>
       <NuxtLink class="card" to="/groupes"><h3>Groupes →</h3><p>Rejoindre un cercle d'étude ou en créer un.</p></NuxtLink>
-      <article class="card soon-item"><h3>Notes personnelles</h3><p>À venir : vos notes privées.</p></article>
-      <article class="card soon-item"><h3>Clé de détermination</h3><p>À venir : identifier une espèce du général au précis.</p></article>
     </div>
   </div>
 </template>

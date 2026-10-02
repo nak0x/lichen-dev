@@ -19,6 +19,7 @@ async function onLogout() {
         <nav>
           <NuxtLink to="/moi">Mon espace</NuxtLink>
           <NuxtLink to="/moi/feed">Mon fil</NuxtLink>
+          <NuxtLink to="/determiner">Déterminer</NuxtLink>
           <NuxtLink to="/groupes">Groupes</NuxtLink>
           <NuxtLink to="/">Fil fédéré</NuxtLink>
           <NuxtLink v-if="isSchool" to="/ecole">École</NuxtLink>

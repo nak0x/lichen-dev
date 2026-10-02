@@ -5,11 +5,13 @@
 
 mod accounts;
 mod auth;
+mod determination;
 mod feeds;
 mod groups;
 mod measurements;
 mod media;
 mod me;
+mod notes;
 mod posts;
 
 use axum::Router;
@@ -30,6 +32,8 @@ pub fn routes() -> Router<AppState> {
         .merge(media::routes())
         .merge(me::routes())
         .merge(measurements::routes())
+        .merge(notes::routes())
+        .merge(determination::routes())
 }
 
 /// Public projection of an account — everything the client may see, and nothing

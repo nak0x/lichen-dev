@@ -36,14 +36,16 @@ use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
 use crate::repository::{
     AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, GroupRepository,
-    LocalActor, MeasurementRepository, MediaRepository, PostRepository,
+    LocalActor, MeasurementRepository, MediaRepository, NoteRepository, PostRepository,
+    TaxonomyRepository,
 };
 use crate::service::{
-    AccountService, ActorService, AuthService, FeedService, GroupService, InboxService,
-    MeasurementService, MediaService, PostService, PublishService,
+    AccountService, ActorService, AuthService, DeterminationService, FeedService, GroupService,
+    InboxService, MeasurementService, MediaService, NoteService, PostService, PublishService,
 };
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
+use crate::domain::TaxonNode;
 
 /// Name of the Redis Stream holding federation jobs, and its consumer group.
 const JOB_STREAM: &str = "wilder:jobs";
@@ -81,6 +83,8 @@ async fn main() -> anyhow::Result<()> {
     let posts: Arc<dyn PostRepository> = store.clone();
     let media_repo: Arc<dyn MediaRepository> = store.clone();
     let measurements: Arc<dyn MeasurementRepository> = store.clone();
+    let notes: Arc<dyn NoteRepository> = store.clone();
+    let taxonomy: Arc<dyn TaxonomyRepository> = store.clone();
 
     // --- object storage: MinIO by default, local filesystem when chosen ---
     let media_store: Arc<dyn MediaStore> = match config.media_backend.as_str() {
@@ -142,6 +146,11 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&groups),
         Arc::clone(&measurements),
     ));
+    let note_service = Arc::new(NoteService::new(Arc::clone(&notes)));
+    let determination_service = Arc::new(DeterminationService::new(Arc::clone(&taxonomy)));
+
+    // Seed the sample determination key on first boot (idempotent).
+    seed_taxonomy(taxonomy.as_ref()).await?;
 
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
     // this is idempotent — see `seed_demo_actor`). Publishes through the same
@@ -205,6 +214,8 @@ async fn main() -> anyhow::Result<()> {
         feed_service,
         media_service,
         measurement_service,
+        note_service,
+        determination_service,
     };
     let app = web::router(state);
 
@@ -282,5 +293,64 @@ async fn seed_demo_actor(
         .await?;
 
     tracing::info!(actor = %actor_id, "seeded demo actor");
+    Ok(())
+}
+
+/// Insert a taxon node, returning its id so children can link to it.
+#[allow(clippy::too_many_arguments)]
+async fn taxon(
+    taxonomy: &dyn TaxonomyRepository,
+    parent: Option<uuid::Uuid>,
+    rank: &str,
+    name: &str,
+    vernacular: Option<&str>,
+    is_species: bool,
+    question: Option<&str>,
+    position: i32,
+) -> anyhow::Result<uuid::Uuid> {
+    let id = uuid::Uuid::new_v4();
+    taxonomy
+        .insert(&TaxonNode {
+            id,
+            parent_id: parent,
+            rank: Some(rank.to_string()),
+            name: name.to_string(),
+            vernacular: vernacular.map(str::to_string),
+            is_species,
+            question: question.map(str::to_string),
+            position,
+        })
+        .await?;
+    Ok(id)
+}
+
+/// Seed a small sample determination key on first boot so `/determiner` has
+/// something to walk: two kingdoms narrowing to a handful of species.
+async fn seed_taxonomy(taxonomy: &dyn TaxonomyRepository) -> anyhow::Result<()> {
+    if taxonomy.count().await? > 0 {
+        return Ok(());
+    }
+
+    let animal = taxon(taxonomy, None, "Règne", "Animal", None, false,
+        Some("A-t-il des poils et allaite-t-il ses petits ?"), 0).await?;
+    let vegetal = taxon(taxonomy, None, "Règne", "Végétal", None, false,
+        Some("Est-ce un arbre ?"), 1).await?;
+
+    let mammifere = taxon(taxonomy, Some(animal), "Classe", "Mammifère", None, false,
+        Some("Vit-il près de l'eau et ronge-t-il le bois ?"), 0).await?;
+    taxon(taxonomy, Some(mammifere), "Espèce", "Castor fiber", Some("Castor d'Europe"),
+        true, None, 0).await?;
+    taxon(taxonomy, Some(mammifere), "Espèce", "Lutra lutra", Some("Loutre d'Europe"),
+        true, None, 1).await?;
+
+    let feuillu = taxon(taxonomy, Some(vegetal), "Groupe", "Feuillu", None, false,
+        Some("Près de l'eau, à écorce lisse et longues feuilles ?"), 0).await?;
+    let conifere = taxon(taxonomy, Some(vegetal), "Groupe", "Conifère", None, false,
+        Some("Aiguilles en faisceaux de deux ?"), 1).await?;
+    taxon(taxonomy, Some(feuillu), "Espèce", "Salix alba", Some("Saule blanc"), true, None, 0).await?;
+    taxon(taxonomy, Some(feuillu), "Espèce", "Quercus robur", Some("Chêne pédonculé"), true, None, 1).await?;
+    taxon(taxonomy, Some(conifere), "Espèce", "Pinus sylvestris", Some("Pin sylvestre"), true, None, 0).await?;
+
+    tracing::info!("seeded sample determination key");
     Ok(())
 }
