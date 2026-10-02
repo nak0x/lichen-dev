@@ -17,6 +17,8 @@ pub enum AppError {
     BadRequest(String),
     #[error("conflict: {0}")]
     Conflict(String),
+    #[error("too many requests")]
+    TooManyRequests,
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
 }
@@ -37,6 +39,7 @@ impl IntoResponse for AppError {
             AppError::Forbidden(_) => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::Conflict(_) => (StatusCode::CONFLICT, self.to_string()),
+            AppError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::Internal(e) => {
                 // Never leak internal detail to a remote peer; log it instead.
                 tracing::error!(error = ?e, "internal error");

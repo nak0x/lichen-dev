@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::cache::RateLimiter;
 use crate::config::AppConfig;
 use crate::federation::FederationClient;
 use crate::queue::JobQueue;
@@ -37,4 +38,6 @@ pub struct AppState {
     pub determination_service: Arc<DeterminationService>,
     // --- school space: events & news (Phase 6) ---
     pub announcement_service: Arc<AnnouncementService>,
+    // --- hardening (Phase 7) ---
+    pub rate_limiter: Arc<RateLimiter>,
 }

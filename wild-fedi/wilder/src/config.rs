@@ -20,6 +20,11 @@ pub struct AppConfig {
     pub database_url: String,
     /// Redis connection string (sessions, feeds, caches, the job queue).
     pub redis_url: String,
+    /// Closed-federation allowlist: the set of peer domains this instance will
+    /// federate with. Empty = open federation. A children's network (README §6)
+    /// sets this to its vetted schools and talks to no one else. Also our
+    /// SSRF guard: outbound fetches/deliveries are restricted to these hosts.
+    pub federation_allowlist: Vec<String>,
     /// Media backend: `"s3"` (MinIO, the default and compose/production choice)
     /// or `"fs"` (a local directory — zero-dependency, good for a single box).
     pub media_backend: String,
@@ -62,6 +67,12 @@ impl AppConfig {
                 .unwrap_or_else(|_| "postgres://wilder:wilder@127.0.0.1:5432/wilder".to_string()),
             redis_url: std::env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+            federation_allowlist: std::env::var("WILDER_FEDERATION_ALLOWLIST")
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect(),
             media_backend: std::env::var("MEDIA_BACKEND").unwrap_or_else(|_| "s3".to_string()),
             media_fs_root: std::env::var("MEDIA_FS_ROOT")
                 .unwrap_or_else(|_| "./data/media".to_string()),
@@ -81,6 +92,15 @@ impl AppConfig {
     /// MinIO directly — the browser never reaches the object store).
     pub fn media_url(&self, id: &str) -> String {
         format!("{}/media/{}", self.base_url(), id)
+    }
+
+    /// Whether we may federate with `host`. Our own domain is always allowed;
+    /// an empty allowlist means open federation.
+    pub fn federation_allowed(&self, host: &str) -> bool {
+        let host = host.to_lowercase();
+        host == self.domain.to_lowercase()
+            || self.federation_allowlist.is_empty()
+            || self.federation_allowlist.contains(&host)
     }
 
     pub fn base_url(&self) -> String {

@@ -3,7 +3,9 @@
 //! phases add feeds, the captured index, remote-actor caching and rate limits.
 
 pub mod feed;
+pub mod rate_limit;
 pub mod session;
 
 pub use feed::LastVisitStore;
+pub use rate_limit::RateLimiter;
 pub use session::SessionStore;

@@ -25,7 +25,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use tracing_subscriber::EnvFilter;
 
-use crate::cache::{LastVisitStore, SessionStore};
+use crate::cache::{LastVisitStore, RateLimiter, SessionStore};
 use crate::config::AppConfig;
 use crate::crypto::KeyPair;
 use crate::federation::FederationClient;
@@ -110,6 +110,7 @@ async fn main() -> anyhow::Result<()> {
 
     // --- identity: Redis sessions + argon2 auth + account provisioning ---
     let sessions = Arc::new(SessionStore::new(redis.clone()));
+    let rate_limiter = Arc::new(RateLimiter::new(redis.clone()));
     let auth = Arc::new(AuthService::new(Arc::clone(&accounts), Arc::clone(&sessions)));
     let account_service = Arc::new(AccountService::new(
         Arc::clone(&config),
@@ -170,11 +171,10 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     // --- federation client: the sole owner of outbound network I/O ---
-    let federation = Arc::new(FederationClient::new(format!(
-        "wilder/{} (+{})",
-        config.software_version,
-        config.base_url()
-    ))?);
+    let federation = Arc::new(FederationClient::new(
+        format!("wilder/{} (+{})", config.software_version, config.base_url()),
+        Arc::clone(&config),
+    )?);
 
     // --- services ---
     let inbox_service = Arc::new(InboxService::new(
@@ -224,6 +224,7 @@ async fn main() -> anyhow::Result<()> {
         note_service,
         determination_service,
         announcement_service,
+        rate_limiter,
     };
     let app = web::router(state);
 

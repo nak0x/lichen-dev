@@ -17,20 +17,45 @@ const ACTIVITY_JSON: &str = "application/activity+json";
 pub struct FederationClient {
     http: reqwest::Client,
     user_agent: String,
+    config: std::sync::Arc<crate::config::AppConfig>,
 }
 
 impl FederationClient {
-    pub fn new(user_agent: String) -> anyhow::Result<Self> {
+    pub fn new(
+        user_agent: String,
+        config: std::sync::Arc<crate::config::AppConfig>,
+    ) -> anyhow::Result<Self> {
         let http = reqwest::Client::builder()
             // Never let one slow peer hang a worker indefinitely.
             .timeout(Duration::from_secs(15))
             .build()
             .context("building HTTP client")?;
-        Ok(Self { http, user_agent })
+        Ok(Self {
+            http,
+            user_agent,
+            config,
+        })
+    }
+
+    /// Reject a URL whose host is not on the federation allowlist. This is both
+    /// the closed-federation gate and our SSRF guard: outbound requests can only
+    /// reach vetted peers, never arbitrary internal addresses.
+    fn guard_url(&self, url: &str) -> anyhow::Result<()> {
+        let parsed = Url::parse(url).with_context(|| format!("bad url {url}"))?;
+        let host = match parsed.port() {
+            Some(port) => format!("{}:{}", parsed.host_str().unwrap_or(""), port),
+            None => parsed.host_str().unwrap_or("").to_string(),
+        };
+        if self.config.federation_allowed(&host) {
+            Ok(())
+        } else {
+            Err(anyhow!("federation with {host} is not allowed"))
+        }
     }
 
     /// Fetch and parse a remote actor document.
     pub async fn fetch_actor(&self, actor_id: &str) -> anyhow::Result<RemoteActor> {
+        self.guard_url(actor_id)?;
         let body = self
             .http
             .get(actor_id)
@@ -72,6 +97,7 @@ impl FederationClient {
         activity: &Value,
         key_id: &str,
     ) -> anyhow::Result<()> {
+        self.guard_url(inbox_url)?;
         let body = serde_json::to_vec(activity)?;
         let url = Url::parse(inbox_url).with_context(|| format!("bad inbox url {inbox_url}"))?;
 

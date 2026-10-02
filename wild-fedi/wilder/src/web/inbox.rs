@@ -74,7 +74,25 @@ async fn ingest(
         return Err(AppError::Unauthorized("digest mismatch".into()));
     }
 
-    // 3. Resolve the signer's public key (keyId → actor → publicKeyPem) and
+    // 3. Closed-federation gate: refuse activities from peers not on the
+    //    allowlist before spending any effort resolving their key.
+    let signer_host = parsed
+        .key_id
+        .split('#')
+        .next()
+        .and_then(|u| url::Url::parse(u).ok())
+        .map(|u| match u.port() {
+            Some(p) => format!("{}:{}", u.host_str().unwrap_or(""), p),
+            None => u.host_str().unwrap_or("").to_string(),
+        })
+        .unwrap_or_default();
+    if !state.config.federation_allowed(&signer_host) {
+        return Err(AppError::Forbidden(format!(
+            "federation with {signer_host} is not allowed"
+        )));
+    }
+
+    // 4. Resolve the signer's public key (keyId → actor → publicKeyPem) and
     //    verify the signature over the exact headers the sender declared.
     let public_key = state
         .federation

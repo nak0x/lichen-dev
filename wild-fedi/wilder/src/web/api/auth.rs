@@ -59,6 +59,14 @@ async fn login(
     State(st): State<AppState>,
     Json(body): Json<LoginInput>,
 ) -> Result<impl IntoResponse, AppError> {
+    // Throttle per-username to blunt credential brute-forcing: 10 tries / 5 min.
+    if !st
+        .rate_limiter
+        .allow(&format!("login:{}", body.username), 10, 300)
+        .await
+    {
+        return Err(AppError::TooManyRequests);
+    }
     let (account, token) = st
         .auth
         .login(&body.username, &body.password)

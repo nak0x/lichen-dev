@@ -48,6 +48,13 @@ impl PostService {
     }
 
     pub async fn create(&self, author: &Account, input: NewPost) -> Result<Post, AppError> {
+        // Bound the content so one post can't carry an unreasonable payload.
+        if input.content.trim().is_empty() {
+            return Err(AppError::BadRequest("content is required".to_string()));
+        }
+        if input.content.len() > 5_000 {
+            return Err(AppError::BadRequest("content too long (max 5000)".to_string()));
+        }
         // Posting into a group requires membership; a personal post does not.
         if let Some(group) = &input.group_username {
             self.groups
