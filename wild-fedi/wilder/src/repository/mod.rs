@@ -14,7 +14,8 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::domain::{
-    Account, Group, Measurement, Member, MediaRef, MembershipRole, Note, NoteKind, Post, TaxonNode,
+    Account, Announcement, AnnouncementKind, Group, Measurement, Member, MediaRef, MembershipRole,
+    Note, NoteKind, Post, TaxonNode,
 };
 use crate::vocab::ActorType;
 
@@ -168,6 +169,14 @@ pub trait NoteRepository: Send + Sync {
         content: &str,
     ) -> anyhow::Result<()>;
     async fn delete(&self, id: Uuid) -> anyhow::Result<()>;
+}
+
+/// School-published events and news.
+#[async_trait]
+pub trait AnnouncementRepository: Send + Sync {
+    async fn insert(&self, a: &Announcement) -> anyhow::Result<()>;
+    async fn list(&self, kind: AnnouncementKind, limit: i64) -> anyhow::Result<Vec<Announcement>>;
+    async fn count(&self, kind: AnnouncementKind) -> anyhow::Result<usize>;
 }
 
 /// The determination-key taxonomy (curated reference data).

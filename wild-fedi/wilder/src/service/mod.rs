@@ -5,6 +5,7 @@
 
 pub mod account_service;
 pub mod actor_service;
+pub mod announcement_service;
 pub mod auth_service;
 pub mod determination_service;
 pub mod feed_service;
@@ -19,6 +20,7 @@ pub mod publish_service;
 
 pub use account_service::AccountService;
 pub use actor_service::ActorService;
+pub use announcement_service::AnnouncementService;
 pub use auth_service::AuthService;
 pub use determination_service::DeterminationService;
 pub use feed_service::FeedService;

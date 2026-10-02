@@ -4,6 +4,7 @@
 //! system stay thin and testable.
 
 pub mod account;
+pub mod announcement;
 pub mod group;
 pub mod measurement;
 pub mod media;
@@ -12,6 +13,7 @@ pub mod post;
 pub mod taxon;
 
 pub use account::{Account, NewAccount, Role};
+pub use announcement::{Announcement, AnnouncementKind, NewAnnouncement};
 pub use group::{Group, Member, MembershipRole, NewGroup};
 pub use measurement::{Measurement, NewMeasurement};
 pub use media::MediaRef;

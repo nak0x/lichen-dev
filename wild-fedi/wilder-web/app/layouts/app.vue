@@ -21,6 +21,7 @@ async function onLogout() {
           <NuxtLink to="/moi/feed">Mon fil</NuxtLink>
           <NuxtLink to="/determiner">Déterminer</NuxtLink>
           <NuxtLink to="/groupes">Groupes</NuxtLink>
+          <NuxtLink to="/actualites">Actualités</NuxtLink>
           <NuxtLink to="/">Fil fédéré</NuxtLink>
           <NuxtLink v-if="isSchool" to="/ecole">École</NuxtLink>
           <span v-if="user" class="who">{{ user.display_name || user.username }}</span>

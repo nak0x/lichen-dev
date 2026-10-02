@@ -6,6 +6,7 @@
 mod accounts;
 mod activities;
 mod actors;
+mod announcements;
 mod followers;
 mod groups;
 mod measurements;

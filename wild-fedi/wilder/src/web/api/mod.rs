@@ -4,6 +4,7 @@
 //! endpoints; this is the human/app side.
 
 mod accounts;
+mod announcements;
 mod auth;
 mod determination;
 mod feeds;
@@ -34,6 +35,7 @@ pub fn routes() -> Router<AppState> {
         .merge(measurements::routes())
         .merge(notes::routes())
         .merge(determination::routes())
+        .merge(announcements::routes())
 }
 
 /// Public projection of an account — everything the client may see, and nothing

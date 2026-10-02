@@ -5,8 +5,8 @@ use crate::federation::FederationClient;
 use crate::queue::JobQueue;
 use crate::repository::ActorRepository;
 use crate::service::{
-    AccountService, ActorService, AuthService, DeterminationService, FeedService, GroupService,
-    MeasurementService, MediaService, NoteService, PostService,
+    AccountService, ActorService, AnnouncementService, AuthService, DeterminationService,
+    FeedService, GroupService, MeasurementService, MediaService, NoteService, PostService,
 };
 
 /// The dependency container handed to every axum handler.
@@ -35,4 +35,6 @@ pub struct AppState {
     // --- personal docs & determination key (Phase 5) ---
     pub note_service: Arc<NoteService>,
     pub determination_service: Arc<DeterminationService>,
+    // --- school space: events & news (Phase 6) ---
+    pub announcement_service: Arc<AnnouncementService>,
 }

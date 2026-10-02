@@ -35,13 +35,14 @@ use crate::queue::redis::build_pool;
 use crate::queue::{JobQueue, RedisQueue, RedisWorkerPool};
 use crate::repository::postgres::PgStore;
 use crate::repository::{
-    AccountRepository, ActivityRepository, ActorRepository, FollowerRepository, GroupRepository,
-    LocalActor, MeasurementRepository, MediaRepository, NoteRepository, PostRepository,
-    TaxonomyRepository,
+    AccountRepository, ActivityRepository, ActorRepository, AnnouncementRepository,
+    FollowerRepository, GroupRepository, LocalActor, MeasurementRepository, MediaRepository,
+    NoteRepository, PostRepository, TaxonomyRepository,
 };
 use crate::service::{
-    AccountService, ActorService, AuthService, DeterminationService, FeedService, GroupService,
-    InboxService, MeasurementService, MediaService, NoteService, PostService, PublishService,
+    AccountService, ActorService, AnnouncementService, AuthService, DeterminationService,
+    FeedService, GroupService, InboxService, MeasurementService, MediaService, NoteService,
+    PostService, PublishService,
 };
 use crate::state::AppState;
 use crate::vocab::{Activity, ActorType, Object};
@@ -85,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
     let measurements: Arc<dyn MeasurementRepository> = store.clone();
     let notes: Arc<dyn NoteRepository> = store.clone();
     let taxonomy: Arc<dyn TaxonomyRepository> = store.clone();
+    let announcements: Arc<dyn AnnouncementRepository> = store.clone();
 
     // --- object storage: MinIO by default, local filesystem when chosen ---
     let media_store: Arc<dyn MediaStore> = match config.media_backend.as_str() {
@@ -155,12 +157,17 @@ async fn main() -> anyhow::Result<()> {
     // Seed a demo actor on first boot (Postgres now persists across restarts, so
     // this is idempotent — see `seed_demo_actor`). Publishes through the same
     // PublishService a real endpoint would use.
-    let publish_service = PublishService::new(
+    let publish_service = Arc::new(PublishService::new(
         Arc::clone(&activities),
         Arc::clone(&followers),
         Arc::clone(&queue),
-    );
+    ));
     seed_demo_actor(&config, actors.as_ref(), &publish_service).await?;
+    let announcement_service = Arc::new(AnnouncementService::new(
+        Arc::clone(&config),
+        Arc::clone(&announcements),
+        Arc::clone(&publish_service),
+    ));
 
     // --- federation client: the sole owner of outbound network I/O ---
     let federation = Arc::new(FederationClient::new(format!(
@@ -216,6 +223,7 @@ async fn main() -> anyhow::Result<()> {
         measurement_service,
         note_service,
         determination_service,
+        announcement_service,
     };
     let app = web::router(state);
 
