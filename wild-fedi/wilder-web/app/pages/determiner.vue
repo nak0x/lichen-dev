@@ -85,11 +85,13 @@ useHead({ title: 'Clé de détermination — Wilder' })
 .question { font-family: var(--serif); font-size: 1.25rem; color: var(--forest-ink); margin: 1.2rem 0 1rem; }
 .choices { list-style: none; padding: 0; display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 .choice {
-  width: 100%; text-align: left; font: inherit; cursor: pointer;
-  background: var(--paper); border: 1px solid var(--line); border-left: 2px solid var(--lichen);
-  border-radius: var(--radius); padding: .8rem 1rem;
+  width: 100%; text-align: left; font: inherit; cursor: pointer; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--sage);
+  border-radius: var(--r-lg); padding: .9rem 1.1rem; box-shadow: var(--shadow);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease), transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
-.choice:hover { border-color: var(--forest); border-left-color: var(--forest); background: var(--lichen-wash); }
+.choice:hover { border-color: var(--primary); border-left-color: var(--primary); background: var(--sage-wash); transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+.choice .name { color: var(--ink); }
 .choice .name { display: block; font-weight: 600; }
 .choice .rank { display: block; font-size: .75rem; color: var(--ink-soft); }
 .species { border-left: 2px solid var(--forest); }

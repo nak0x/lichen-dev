@@ -157,6 +157,11 @@ ul { padding-left: 1.15rem; }
 li { margin-bottom: .35rem; }
 code { font-family: var(--mono); font-size: .85em; }
 img { max-width: 100%; }
+/* Buttons don't inherit `color` by default; with `color-scheme: light dark` the
+   UA can paint a custom-background button with a system text colour that reads
+   light on our light surfaces. Inherit by default — `.btn` and other buttons set
+   their own colour explicitly, so only unstyled ones are affected. */
+button { color: inherit; }
 
 a:focus-visible, button:focus-visible, summary:focus-visible, select:focus-visible,
 input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
@@ -330,8 +335,11 @@ a.card:active { transform: translateY(-1px); }
   border: 2px solid currentColor; border-top-color: transparent; color: #fff; animation: spin .6s linear infinite;
 }
 .btn.ghost.loading::after { color: var(--primary); }
-:root[data-theme="dark"] .btn { color: #0f140d; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #0f140d; } }
+/* Dark mode flips solid buttons to dark text (on their light-tinted fills) —
+   but NOT ghost buttons, whose text must stay the primary tint on a transparent
+   fill. Excluding `.ghost` keeps this override from outranking `.btn.ghost`. */
+:root[data-theme="dark"] .btn:not(.ghost) { color: #0f140d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn:not(.ghost) { color: #0f140d; } }
 .btn.ghost { color: var(--primary); }
 
 .actions { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
