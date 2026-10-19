@@ -49,7 +49,7 @@ redis = { version = "1", features = ["streams"] }
 # --- password hashing (RustCrypto family, matching the HTTP-signature crypto choices) ---
 argon2 = "0.6"
 
-# --- object storage: MinIO via the S3 API (media bytes; metadata stays in Postgres) ---
+# --- object storage: Garage via the S3 API (media bytes; metadata stays in Postgres) ---
 aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-credential-types = "1"

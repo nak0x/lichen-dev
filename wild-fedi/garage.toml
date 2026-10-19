@@ -1,0 +1,38 @@
+# Garage — stockage objet compatible S3 pour la pile wild-fedi (remplace MinIO).
+# Configuration mono-nœud : un seul Garage détient toutes les données, sans
+# réplication. Suffisant pour une instance d'école (un seul serveur, voire un
+# Raspberry Pi) ; en production multi-nœuds il faudrait relever
+# `replication_factor` et renseigner `rpc_public_addr` sur chaque nœud.
+#
+# Monté dans le conteneur en /etc/garage.toml (chemin de config par défaut).
+# Les secrets d'exécution (rpc_secret, clés S3) ne vivent PAS ici : ils sont
+# injectés par docker-compose via les variables d'environnement GARAGE_*, pour
+# garder ce fichier versionnable et sans secret.
+
+# Où Garage range ses métadonnées et les blocs de données. Un volume Docker est
+# monté sur /var/lib/garage, donc ces deux dossiers survivent aux redémarrages.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+
+# Moteur de métadonnées : sqlite est portable entre architectures et robuste aux
+# arrêts brutaux (contrairement à lmdb dont le format est lié à l'architecture).
+# Le bon choix pour un déploiement simple, mono-machine, éventuellement sur ARM.
+db_engine = "sqlite"
+
+# Mono-nœud : aucune copie supplémentaire des objets.
+replication_factor = 1
+
+# Canal RPC inter-nœuds. On n'expose pas ce port hors du réseau compose ; le
+# secret partagé est fourni par GARAGE_RPC_SECRET (obligatoire, même seul).
+rpc_bind_addr = "[::]:3901"
+
+# API S3 : c'est l'unique surface que le serveur `wilder` consomme.
+[s3_api]
+# La région doit correspondre à `S3_REGION` côté client : elle entre dans la
+# signature SigV4, une divergence fait échouer l'authentification.
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+# Domaine pour l'adressage « virtual-host » des buckets. `wilder` utilise
+# l'adressage « path-style » (force_path_style), donc cette valeur n'est pas
+# réellement sollicitée, mais Garage attend le champ.
+root_domain = ".s3.garage.localhost"

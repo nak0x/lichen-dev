@@ -9,8 +9,8 @@ use aws_sdk_s3::primitives::ByteStream;
 use super::{MediaStore, StoredObject};
 use crate::config::S3Config;
 
-/// S3-compatible media store, used against MinIO. Path-style addressing is
-/// required (MinIO does not do virtual-host buckets by default).
+/// S3-compatible media store, used against Garage. Path-style addressing is
+/// used (Garage supports it without per-bucket DNS setup).
 pub struct S3Media {
     client: Client,
     bucket: String,
@@ -32,8 +32,10 @@ impl S3Media {
         }
     }
 
-    /// Ensure the bucket exists, retrying while MinIO finishes starting (compose
-    /// gates us on "started", not "healthy", so the first calls may race boot).
+    /// Ensure the bucket exists, retrying while Garage finishes starting (compose
+    /// gates us on "started", not "healthy", so the first calls may race its
+    /// single-node bootstrap). The default bucket is created by Garage itself; this
+    /// is a check-and-create fallback for the `--default-access-key`-only setup.
     pub async fn ensure_bucket(&self) -> anyhow::Result<()> {
         let mut last_err = None;
         for attempt in 1..=15 {

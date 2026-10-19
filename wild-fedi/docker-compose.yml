@@ -37,19 +37,31 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # --- Store objet : MinIO (médias, compatible S3) ---------------------------
-  minio:
-    image: minio/minio
-    command: ["server", "/data", "--console-address", ":9001"]
+  # --- Store objet : Garage (médias, compatible S3) --------------------------
+  # `server --single-node` amorce tout seul une disposition de cluster à un
+  # nœud ; `--default-bucket` crée (de façon idempotente) la clé d'accès et le
+  # bucket à partir des variables GARAGE_DEFAULT_*, et donne à la clé les droits
+  # owner sur le bucket. Aucune étape d'initialisation externe n'est donc requise
+  # (contrairement à un `garage layout` + `bucket create` manuels).
+  garage:
+    image: dxflrs/garage:v2.4.1
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
     environment:
-      MINIO_ROOT_USER: wilder
-      MINIO_ROOT_PASSWORD: wilder-secret
+      # Secret du canal RPC (obligatoire même en mono-nœud). Valeur de dev —
+      # à régénérer (`openssl rand -hex 32`) pour un déploiement réel.
+      GARAGE_RPC_SECRET: fa4b3fc026435eb38141f03bbe12d64235848d287bc5c276043f82d6e603c37c
+      # Clé S3 et bucket par défaut amorcés au démarrage. La clé doit faire ≥ 8
+      # caractères et le secret ≥ 16 (contrainte Garage).
+      GARAGE_DEFAULT_ACCESS_KEY: wilder-media-key
+      GARAGE_DEFAULT_SECRET_KEY: wilder-media-secret-key
+      GARAGE_DEFAULT_BUCKET: wilder-media
     volumes:
-      - miniodata:/data
+      - ./garage.toml:/etc/garage.toml:ro
+      - garagedata:/var/lib/garage
     ports:
-      # 9000 = API S3 ; 9001 = console web (pratique en dev, inutile en prod).
-      - "9000:9000"
-      - "9001:9001"
+      # 3900 = API S3 (exposée pour un accès depuis l'hôte, ex. aws-cli). Le RPC
+      # (3901) reste interne au réseau compose. Garage n'a pas de console web.
+      - "3900:3900"
     restart: unless-stopped
 
   # --- Back : serveur ActivityPub -------------------------------------------
@@ -66,18 +78,21 @@ services:
       WILDER_DOMAIN: wilder:8080
       DATABASE_URL: postgres://wilder:wilder@postgres:5432/wilder
       REDIS_URL: redis://redis:6379
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: http://garage:3900
       S3_BUCKET: wilder-media
-      S3_ACCESS_KEY: wilder
-      S3_SECRET_KEY: wilder-secret
+      S3_ACCESS_KEY: wilder-media-key
+      S3_SECRET_KEY: wilder-media-secret-key
+      # Doit correspondre à `s3_region` dans garage.toml (entre dans la signature).
+      S3_REGION: garage
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
-      # MinIO has no reliable in-image healthcheck binary, so we gate on "started"
-      # and let wilder retry bucket creation on boot.
-      minio:
+      # Garage's single-node bootstrap takes a moment and the image ships no
+      # curl for a healthcheck, so we gate on "started" and let wilder retry its
+      # bucket check on boot (ensure_bucket backs off for ~30s).
+      garage:
         condition: service_started
       redis:
         condition: service_healthy
@@ -114,4 +129,4 @@ services:
 volumes:
   pgdata:
   redisdata:
-  miniodata:
+  garagedata:

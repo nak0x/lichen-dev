@@ -1,5 +1,5 @@
 //! Filesystem-backed media store: bytes under a directory, content type in a
-//! sidecar file. The zero-dependency alternative to MinIO — handy for a
+//! sidecar file. The zero-dependency alternative to Garage — handy for a
 //! single-box / Raspberry-Pi deployment, and what the tests run against. The S3
 //! store remains the default; this is chosen with `MEDIA_BACKEND=fs`.
 

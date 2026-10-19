@@ -25,16 +25,16 @@ pub struct AppConfig {
     /// sets this to its vetted schools and talks to no one else. Also our
     /// SSRF guard: outbound fetches/deliveries are restricted to these hosts.
     pub federation_allowlist: Vec<String>,
-    /// Media backend: `"s3"` (MinIO, the default and compose/production choice)
+    /// Media backend: `"s3"` (Garage, the default and compose/production choice)
     /// or `"fs"` (a local directory — zero-dependency, good for a single box).
     pub media_backend: String,
     /// Directory for the `fs` media backend.
     pub media_fs_root: String,
-    /// S3/MinIO settings for media bytes (used when `media_backend == "s3"`).
+    /// S3/Garage settings for media bytes (used when `media_backend == "s3"`).
     pub s3: S3Config,
 }
 
-/// Object-storage connection for media. MinIO speaks the S3 API; the only
+/// Object-storage connection for media. Garage speaks the S3 API; the only
 /// non-default is path-style addressing (`force_path_style`).
 #[derive(Debug, Clone)]
 pub struct S3Config {
@@ -78,18 +78,19 @@ impl AppConfig {
                 .unwrap_or_else(|_| "./data/media".to_string()),
             s3: S3Config {
                 endpoint: std::env::var("S3_ENDPOINT")
-                    .unwrap_or_else(|_| "http://127.0.0.1:9000".to_string()),
+                    .unwrap_or_else(|_| "http://127.0.0.1:3900".to_string()),
                 bucket: std::env::var("S3_BUCKET").unwrap_or_else(|_| "wilder-media".to_string()),
-                access_key: std::env::var("S3_ACCESS_KEY").unwrap_or_else(|_| "wilder".to_string()),
+                access_key: std::env::var("S3_ACCESS_KEY")
+                    .unwrap_or_else(|_| "wilder-media-key".to_string()),
                 secret_key: std::env::var("S3_SECRET_KEY")
-                    .unwrap_or_else(|_| "wilder-secret".to_string()),
-                region: std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+                    .unwrap_or_else(|_| "wilder-media-secret-key".to_string()),
+                region: std::env::var("S3_REGION").unwrap_or_else(|_| "garage".to_string()),
             },
         })
     }
 
     /// Public URL at which a stored media object is served (through wilder, not
-    /// MinIO directly — the browser never reaches the object store).
+    /// Garage directly — the browser never reaches the object store).
     pub fn media_url(&self, id: &str) -> String {
         format!("{}/media/{}", self.base_url(), id)
     }

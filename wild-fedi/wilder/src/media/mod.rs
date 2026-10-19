@@ -1,4 +1,4 @@
-//! Blob storage port. Media *bytes* live here (MinIO/S3); their *metadata*
+//! Blob storage port. Media *bytes* live here (Garage/S3); their *metadata*
 //! lives in Postgres. The trait keeps the rest of the app ignorant of S3 — a
 //! local-filesystem or other backend could implement it without any caller
 //! change (DIP), mirroring the repository traits.

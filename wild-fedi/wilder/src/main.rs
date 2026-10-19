@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
     let taxonomy: Arc<dyn TaxonomyRepository> = store.clone();
     let announcements: Arc<dyn AnnouncementRepository> = store.clone();
 
-    // --- object storage: MinIO by default, local filesystem when chosen ---
+    // --- object storage: Garage by default, local filesystem when chosen ---
     let media_store: Arc<dyn MediaStore> = match config.media_backend.as_str() {
         "fs" => {
             tracing::info!(root = %config.media_fs_root, "media backend: filesystem");
@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
         _ => {
             let s3 = S3Media::new(&config.s3);
             s3.ensure_bucket().await.context("preparing object store")?;
-            tracing::info!(endpoint = %config.s3.endpoint, "media backend: S3/MinIO");
+            tracing::info!(endpoint = %config.s3.endpoint, "media backend: S3/Garage");
             Arc::new(s3)
         }
     };

@@ -17,7 +17,7 @@ only place that knows the concrete implementations.
   them, `repository/memory.rs` is a `#[cfg(test)]` test double.
 - **`cache/`** — Redis-backed, rebuildable state: sessions, last-visit marks,
   rate limiting.
-- **`media/`** — a `MediaStore` port with S3/MinIO and filesystem backends.
+- **`media/`** — a `MediaStore` port with S3/Garage and filesystem backends.
 - **`crypto/`** — RSA keys + HTTP Signatures (hand-rolled) and argon2 passwords.
 - **`federation/`** — the sole owner of outbound server-to-server I/O, with the
   allowlist/SSRF guard.
@@ -32,7 +32,7 @@ only place that knows the concrete implementations.
 Durable, relational data lives in **Postgres** (accounts, actors, groups, posts,
 notes, taxonomy, media metadata, measurements, announcements, the activity log).
 High-write / rebuildable state lives in **Redis** (sessions, per-user last-visit,
-rate-limit counters, the job queue). Media **bytes** live in **MinIO** (or a local
+rate-limit counters, the job queue). Media **bytes** live in **Garage** (or a local
 directory); their metadata stays in Postgres.
 
 ## Running
@@ -41,7 +41,7 @@ The whole stack runs from `../` with Docker:
 
 ```bash
 cd ..            # wild-fedi/
-make stack       # postgres + redis + minio + wilder + wilder-web
+make stack       # postgres + redis + garage + wilder + wilder-web
 ```
 
 - Server: http://localhost:8080 · Client: http://localhost:3000
@@ -56,7 +56,7 @@ cp .env.example .env     # adjust as needed
 cargo run                # needs Postgres + Redis reachable (see .env)
 ```
 
-Set `MEDIA_BACKEND=fs` to avoid running MinIO (bytes go under `MEDIA_FS_ROOT`).
+Set `MEDIA_BACKEND=fs` to avoid running Garage (bytes go under `MEDIA_FS_ROOT`).
 
 ## Configuration (env)
 
@@ -65,9 +65,9 @@ Set `MEDIA_BACKEND=fs` to avoid running MinIO (bytes go under `MEDIA_FS_ROOT`).
 | `WILDER_SCHEME` / `WILDER_DOMAIN` / `WILDER_BIND` | `http` / `127.0.0.1:8080` / `127.0.0.1:8080` | Federated identity + listen address |
 | `DATABASE_URL` | local Postgres | Durable store |
 | `REDIS_URL` | local Redis | Volatile store + queue |
-| `MEDIA_BACKEND` | `s3` | `s3` (MinIO) or `fs` (local directory) |
+| `MEDIA_BACKEND` | `s3` | `s3` (Garage) or `fs` (local directory) |
 | `MEDIA_FS_ROOT` | `./data/media` | Directory for the `fs` backend |
-| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | MinIO defaults | Object storage |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_REGION` | Garage defaults | Object storage (region must match Garage's `s3_region`) |
 | `WILDER_FEDERATION_ALLOWLIST` | empty (open) | Vetted peer domains; also the SSRF guard |
 | `WILDER_WORKERS` / `WILDER_QUEUE_CAPACITY` | `4` / `1024` | Worker pool + stream cap |
 
@@ -76,9 +76,12 @@ Set `MEDIA_BACKEND=fs` to avoid running MinIO (bytes go under `MEDIA_FS_ROOT`).
 - **sqlx queries are runtime-checked** (not the `query!` macros), so builds are
   hermetic — no database is needed to compile, and Docker builds stay simple. The
   cost is that SQL errors surface at run time; each phase is verified by running.
-- **MinIO's `minio/minio` Docker Hub image is gated** in some environments and
-  may require `docker login`. If a pull is denied, authenticate or run with
-  `MEDIA_BACKEND=fs`, which needs no external service.
+- **Garage self-bootstraps** in the compose stack: `garage server --single-node
+  --default-bucket` creates the cluster layout, the access key, and the media
+  bucket (with owner rights) from the `GARAGE_DEFAULT_*` env vars — no init job
+  or manual `garage layout`/`bucket create` is needed. Note Garage requires an
+  access key ≥ 8 chars and a secret ≥ 16 chars. For a zero-dependency single box,
+  `MEDIA_BACKEND=fs` runs no object store at all.
 - **Closed federation** (`WILDER_FEDERATION_ALLOWLIST`) implements the
   children's-network posture (parent README §6): the instance talks only to
   vetted peers, and private features (notes, research, determination traversal)
