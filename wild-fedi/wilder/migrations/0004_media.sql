@@ -1,4 +1,4 @@
--- Media metadata. The bytes live in the object store (Garage); this row is the
+-- Media metadata. The bytes live in the object store (MinIO); this row is the
 -- durable index that maps a public id to its object key, owner and content type.
 CREATE TABLE media (
     id           UUID PRIMARY KEY,
