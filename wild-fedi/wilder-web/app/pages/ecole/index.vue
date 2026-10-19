@@ -170,7 +170,7 @@ useHead({ title: 'École — Wilder' })
 
 <style scoped>
 .kpis { margin: 1rem 0 1.6rem; }
-.kpi b svg { font-size: 1rem; color: var(--sage); }
+.kpi b svg { font-size: 1rem; color: var(--label); }
 .hint-card { position: relative; border-left: 3px solid var(--accent); margin: 1.2rem 0; }
 .hint-card h2 { margin: 0 0 .7rem; font-size: 1.1rem; }
 .dismiss { position: absolute; top: .7rem; right: .8rem; background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 1rem; }

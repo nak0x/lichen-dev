@@ -131,7 +131,7 @@ useHead({ title: 'Mon espace — Wilder' })
   width: 6rem; height: 6rem; border-radius: 50%; object-fit: cover;
   border: 1px solid var(--line); background: var(--lichen-wash);
 }
-.avatar-ph { display: grid; place-items: center; font-size: 2rem; color: var(--lichen); }
+.avatar-ph { display: grid; place-items: center; font-size: 2rem; color: var(--primary-ink); font-family: var(--display); font-weight: 600; }
 .fields { flex: 1 1 18rem; display: flex; flex-direction: column; gap: .7rem; }
 .fields label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; color: var(--ink-soft); font-weight: 500; }
 .soon { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }

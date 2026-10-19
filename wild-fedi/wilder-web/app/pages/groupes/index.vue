@@ -111,5 +111,5 @@ useHead({ title: 'Groupes — Wilder' })
 .gmark { width: 2.4rem; height: 2.4rem; flex: none; display: grid; place-items: center; border-radius: 40% 60% 58% 42% / 54% 44% 56% 46%; background: var(--sage-wash); color: var(--primary); }
 .gbody { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .gbody strong { font-family: var(--display); font-weight: 560; }
-.chev { color: var(--sage); flex: none; }
+.chev { color: var(--label); flex: none; }
 </style>
