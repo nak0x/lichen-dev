@@ -72,10 +72,13 @@ async function onPickImage(e: Event) {
   }
 }
 
+const notice = ref('')
+
 async function publish() {
   posting.value = true
+  notice.value = ''
   try {
-    await $fetch('/api/backend/posts', {
+    const post = await $fetch<{ status: string }>('/api/backend/posts', {
       method: 'POST',
       body: {
         group: username,
@@ -87,6 +90,11 @@ async function publish() {
     draft.content = ''
     draft.tags = ''
     attached.value = null
+    // A guest's submission comes back `pending`: it is held for admin review and
+    // won't appear in the feed yet, so tell them rather than silently refreshing.
+    notice.value = post.status === 'pending'
+      ? 'Observation envoyée. Elle sera visible après validation par un administrateur.'
+      : ''
     await Promise.all([refreshPosts(), refreshCaptured(), refreshPictures()])
   } finally {
     posting.value = false
@@ -120,6 +128,10 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
 
     <!-- Composer: members only -->
     <form v-if="group.is_member" class="composer card" @submit.prevent="publish">
+      <p v-if="group.role === 'guest'" class="review-note">
+        En tant qu’invité, vos observations sont relues par un administrateur avant publication.
+      </p>
+      <p v-if="notice" class="ok">{{ notice }}</p>
       <textarea v-model="draft.content" rows="3" placeholder="Partager une observation…" required />
       <figure v-if="attached" class="preview">
         <img :src="mediaSrc(attached.url)" alt="aperçu" />
@@ -200,6 +212,8 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
 .ghead h1 { margin: 0; }
 .composer { margin: 1.2rem 0; }
 .composer textarea { width: 100%; }
+.review-note { font-size: .82rem; color: var(--ink-soft); margin: 0 0 .6rem; }
+.ok { font-size: .85rem; color: var(--forest); margin: 0 0 .6rem; }
 .composer-foot { display: flex; gap: .5rem; margin-top: .5rem; align-items: center; }
 .composer-foot input { flex: 1; }
 .composer-foot .btn { flex: none; }

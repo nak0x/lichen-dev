@@ -18,5 +18,5 @@ pub use group::{Group, Member, MembershipRole, NewGroup};
 pub use measurement::{Measurement, NewMeasurement};
 pub use media::MediaRef;
 pub use note::{NewNote, Note, NoteKind};
-pub use post::{NewPost, Post};
+pub use post::{NewPost, Post, PostStatus};
 pub use taxon::TaxonNode;

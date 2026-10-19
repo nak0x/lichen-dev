@@ -3,6 +3,7 @@ use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
 use axum::Router;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use super::PostView;
 use crate::domain::NewPost;
@@ -16,6 +17,10 @@ pub fn routes() -> Router<AppState> {
         .route("/groups/{username}/posts", get(group_posts))
         .route("/groups/{username}/captured", get(group_captured))
         .route("/groups/{username}/pictures", get(group_pictures))
+        // Moderation (group admins): the review queue and its two decisions.
+        .route("/groups/{username}/pending", get(group_pending))
+        .route("/posts/{id}/approve", post(approve))
+        .route("/posts/{id}/reject", post(reject))
 }
 
 #[derive(Deserialize)]
@@ -86,4 +91,35 @@ async fn group_captured(
 ) -> Result<Json<Vec<PostView>>, AppError> {
     let posts = st.post_service.captured(Some(&username)).await?;
     Ok(Json(posts.into_iter().map(Into::into).collect()))
+}
+
+/// A group's review queue: guest submissions awaiting a decision. Admins only
+/// (enforced in the service).
+async fn group_pending(
+    CurrentUser(user): CurrentUser,
+    State(st): State<AppState>,
+    Path(username): Path<String>,
+) -> Result<Json<Vec<PostView>>, AppError> {
+    let posts = st.post_service.pending(&user, &username).await?;
+    Ok(Json(posts.into_iter().map(Into::into).collect()))
+}
+
+/// Approve a held submission — it goes live and federates. Admins only.
+async fn approve(
+    CurrentUser(user): CurrentUser,
+    State(st): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<PostView>, AppError> {
+    let post = st.post_service.approve(&user, id).await?;
+    Ok(Json(post.into()))
+}
+
+/// Decline a held submission. Admins only.
+async fn reject(
+    CurrentUser(user): CurrentUser,
+    State(st): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<axum::http::StatusCode, AppError> {
+    st.post_service.reject(&user, id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }

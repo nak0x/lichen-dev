@@ -23,28 +23,50 @@ pub struct NewGroup {
     pub subject: Option<String>,
 }
 
-/// A member's standing in a group. The creator is an `Admin`; everyone else a
-/// `Member`. Only admins moderate and manage membership.
+/// A member's standing in a group — a trust tier the admin assigns:
+/// - `Guest`: may read and submit, but submissions go to the admin review queue.
+/// - `Contributor`: may post without review (the default trusted member).
+/// - `Admin`: all of the above, plus moderation and membership management.
+///
+/// The group creator is an `Admin`; new joiners start as `Guest` until an admin
+/// promotes them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MembershipRole {
     Admin,
-    Member,
+    Contributor,
+    Guest,
 }
 
 impl MembershipRole {
     pub fn as_db(self) -> &'static str {
         match self {
             MembershipRole::Admin => "admin",
-            MembershipRole::Member => "member",
+            MembershipRole::Contributor => "contributor",
+            MembershipRole::Guest => "guest",
         }
     }
     pub fn from_db(s: &str) -> Option<Self> {
         match s {
             "admin" => Some(MembershipRole::Admin),
-            "member" => Some(MembershipRole::Member),
+            "contributor" => Some(MembershipRole::Contributor),
+            "guest" => Some(MembershipRole::Guest),
+            // Legacy rows written before the trust tiers existed could post
+            // directly, so they map to `contributor`.
+            "member" => Some(MembershipRole::Contributor),
             _ => None,
         }
+    }
+
+    /// May this member publish immediately, without admin review? Admins and
+    /// contributors can; guests are moderated.
+    pub fn can_post_without_review(self) -> bool {
+        matches!(self, MembershipRole::Admin | MembershipRole::Contributor)
+    }
+
+    /// May this member moderate the review queue and manage membership/roles?
+    pub fn can_moderate(self) -> bool {
+        matches!(self, MembershipRole::Admin)
     }
 }
 

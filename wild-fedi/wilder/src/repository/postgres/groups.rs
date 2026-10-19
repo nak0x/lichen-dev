@@ -98,6 +98,25 @@ impl GroupRepository for PgStore {
         Ok(())
     }
 
+    async fn set_role(
+        &self,
+        group_username: &str,
+        account_id: Uuid,
+        role: MembershipRole,
+    ) -> anyhow::Result<bool> {
+        // UPDATE only — unlike `add_member`, re-tiering a non-member is a no-op
+        // the caller should see (so it can 404 rather than create a membership).
+        let result = sqlx::query(
+            "UPDATE memberships SET role = $3 WHERE group_username = $1 AND account_id = $2",
+        )
+        .bind(group_username)
+        .bind(account_id)
+        .bind(role.as_db())
+        .execute(self.pool())
+        .await?;
+        Ok(result.rows_affected() > 0)
+    }
+
     async fn members(&self, group_username: &str) -> anyhow::Result<Vec<Member>> {
         let rows = sqlx::query(
             "SELECT a.id, a.username, a.display_name, m.role \

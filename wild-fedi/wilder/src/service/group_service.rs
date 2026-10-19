@@ -93,8 +93,10 @@ impl GroupService {
 
     pub async fn join(&self, account: &Account, username: &str) -> Result<(), AppError> {
         self.get(username).await?;
+        // New joiners start as `Guest`: they may read and submit, but their
+        // submissions are held for admin review until promoted to contributor.
         self.groups
-            .add_member(username, account.id, MembershipRole::Member)
+            .add_member(username, account.id, MembershipRole::Guest)
             .await?;
         Ok(())
     }
@@ -134,6 +136,31 @@ impl GroupService {
             ));
         }
         self.groups.remove_member(username, target).await?;
+        Ok(())
+    }
+
+    /// An admin re-tiers a member (guest / contributor / admin). The caller must
+    /// be an admin, and may not demote themselves — a group must keep at least
+    /// one admin, and the simplest way to guarantee that is to forbid self-change.
+    pub async fn set_role(
+        &self,
+        admin: &Account,
+        username: &str,
+        target: uuid::Uuid,
+        role: MembershipRole,
+    ) -> Result<(), AppError> {
+        if !self.require_member(username, admin.id).await?.can_moderate() {
+            return Err(AppError::Forbidden("admin only".to_string()));
+        }
+        if target == admin.id {
+            return Err(AppError::BadRequest(
+                "cannot change your own role".to_string(),
+            ));
+        }
+        if !self.groups.set_role(username, target, role).await? {
+            return Err(AppError::NotFound);
+        }
+        tracing::info!(group = %username, %target, role = role.as_db(), by = %admin.username, "changed member role");
         Ok(())
     }
 }

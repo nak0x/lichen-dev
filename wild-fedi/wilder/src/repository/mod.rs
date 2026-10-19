@@ -108,6 +108,14 @@ pub trait GroupRepository: Send + Sync {
         role: MembershipRole,
     ) -> anyhow::Result<()>;
     async fn remove_member(&self, group_username: &str, account_id: Uuid) -> anyhow::Result<()>;
+    /// Change an existing member's role. Returns `false` if they are not a member
+    /// (nothing to re-tier), so the caller can 404 rather than silently no-op.
+    async fn set_role(
+        &self,
+        group_username: &str,
+        account_id: Uuid,
+        role: MembershipRole,
+    ) -> anyhow::Result<bool>;
     async fn members(&self, group_username: &str) -> anyhow::Result<Vec<Member>>;
     async fn role_of(
         &self,
@@ -120,6 +128,17 @@ pub trait GroupRepository: Send + Sync {
 #[async_trait]
 pub trait PostRepository: Send + Sync {
     async fn insert(&self, post: &Post) -> anyhow::Result<()>;
+    /// A single post by id — the moderation handlers load the target this way.
+    async fn by_id(&self, id: Uuid) -> anyhow::Result<Option<Post>>;
+    /// Move a post through the moderation workflow (approve/reject).
+    async fn set_status(&self, id: Uuid, status: crate::domain::PostStatus)
+    -> anyhow::Result<()>;
+    /// The admin review queue: a group's `pending` posts, newest first.
+    async fn pending_in_group(
+        &self,
+        group_username: &str,
+        limit: i64,
+    ) -> anyhow::Result<Vec<Post>>;
     /// Posts in a group, optionally filtered to a single tag, newest first.
     async fn in_group(
         &self,

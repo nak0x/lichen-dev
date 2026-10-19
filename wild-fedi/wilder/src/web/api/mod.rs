@@ -84,6 +84,10 @@ pub struct GroupView {
     pub created_at: String,
     pub is_member: bool,
     pub is_admin: bool,
+    /// The caller's trust tier in the group (`guest`/`contributor`/`admin`), or
+    /// `None` if they are not a member — lets the UI tailor the composer (e.g.
+    /// warn a guest that their post will be reviewed).
+    pub role: Option<crate::domain::MembershipRole>,
 }
 
 impl GroupView {
@@ -97,6 +101,7 @@ impl GroupView {
             created_at: g.created_at.to_rfc3339(),
             is_member: role.is_some(),
             is_admin: role == Some(MembershipRole::Admin),
+            role,
         }
     }
 }
@@ -132,6 +137,9 @@ pub struct PostView {
     pub content: Option<String>,
     pub tags: Vec<String>,
     pub object_id: String,
+    /// Moderation state (`published`/`pending`/`rejected`) — so the composer can
+    /// tell a guest their observation is awaiting review.
+    pub status: crate::domain::PostStatus,
     pub published: String,
     pub activity: serde_json::Value,
 }
@@ -145,6 +153,7 @@ impl From<Post> for PostView {
             content: p.content,
             tags: p.tags,
             object_id: p.object_id,
+            status: p.status,
             published: p.published.to_rfc3339(),
             activity: p.activity,
         }

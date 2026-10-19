@@ -1,12 +1,12 @@
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::routing::{delete, get, post};
+use axum::routing::{get, patch, post};
 use axum::Router;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use super::{GroupView, MemberView};
-use crate::domain::NewGroup;
+use crate::domain::{MembershipRole, NewGroup};
 use crate::error::AppError;
 use crate::state::AppState;
 use crate::web::extract::CurrentUser;
@@ -17,7 +17,10 @@ pub fn routes() -> Router<AppState> {
         .route("/groups/mine", get(mine))
         .route("/groups/{username}", get(detail))
         .route("/groups/{username}/members", get(members))
-        .route("/groups/{username}/members/{account_id}", delete(remove_member))
+        .route(
+            "/groups/{username}/members/{account_id}",
+            patch(set_member_role).delete(remove_member),
+        )
         .route("/groups/{username}/join", post(join))
         .route("/groups/{username}/leave", post(leave))
 }
@@ -121,6 +124,25 @@ async fn leave(
     Path(username): Path<String>,
 ) -> Result<axum::http::StatusCode, AppError> {
     st.group_service.leave(&user, &username).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct RoleInput {
+    role: MembershipRole,
+}
+
+/// Admin flags a member's trust tier (guest / contributor / admin). Guests'
+/// submissions are reviewed; contributors publish directly.
+async fn set_member_role(
+    CurrentUser(user): CurrentUser,
+    State(st): State<AppState>,
+    Path((username, account_id)): Path<(String, Uuid)>,
+    Json(body): Json<RoleInput>,
+) -> Result<axum::http::StatusCode, AppError> {
+    st.group_service
+        .set_role(&user, &username, account_id, body.role)
+        .await?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
