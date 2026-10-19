@@ -23,7 +23,7 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
     <!-- Hero ----------------------------------------------------------------->
     <section class="hero">
       <FondLichen />
-      <div class="hero-in">
+      <div class="hero-in rise">
         <p class="oeil">Réseau LICHEN · fédiverse</p>
         <h1 class="titre">Wilder</h1>
         <p class="accroche">
@@ -41,7 +41,14 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
 
     <!-- Le fil --------------------------------------------------------------->
     <section class="wrap">
-      <div v-if="pending" class="spin">Chargement du fil…</div>
+      <div v-if="pending" class="feed" aria-busy="true" aria-label="Chargement du fil">
+        <div v-for="n in 3" :key="n" class="observation skelcard">
+          <div class="skel skel-line" style="width:35%"></div>
+          <div class="skel skel-line" style="width:92%"></div>
+          <div class="skel skel-line" style="width:78%"></div>
+          <div class="skel skel-card" style="margin-top:.7rem"></div>
+        </div>
+      </div>
 
       <div v-else-if="error" class="err">
         <p><strong>Impossible de joindre l'instance.</strong></p>
@@ -61,7 +68,7 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
           </p>
         </header>
 
-        <div v-if="items.length" class="feed">
+        <div v-if="items.length" class="feed stagger">
           <ObservationCard v-for="(it, i) in items" :key="it.id || i" :item="it" />
         </div>
         <div v-else class="empty">
@@ -107,4 +114,6 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
 
 .feed-head { margin-top: 2.4rem; }
 .feed-head h2 { margin: 0 0 .3rem; }
+.skelcard { pointer-events: none; }
+.skelcard:hover { box-shadow: var(--shadow); border-left-color: var(--lichen); }
 </style>

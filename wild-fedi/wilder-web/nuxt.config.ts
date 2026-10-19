@@ -24,6 +24,9 @@ export default defineNuxtConfig({
   },
 
   app: {
+    // A quick cross-fade between pages (classes in main.css). `out-in` keeps
+    // pages from overlapping; reduced-motion zeroes the durations.
+    pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       htmlAttrs: { lang: 'fr' },
       meta: [

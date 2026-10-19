@@ -34,17 +34,24 @@ watchEffect(() => {
 const savingProfile = ref(false)
 const uploadingAvatar = ref(false)
 const notice = ref('')
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+// A short-lived confirmation chip rather than a permanent line of text.
+function flash(msg: string) {
+  notice.value = msg
+  clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => (notice.value = ''), 3200)
+}
 
 async function saveProfile() {
   savingProfile.value = true
-  notice.value = ''
   try {
     await $fetch('/api/backend/me/profile', {
       method: 'PATCH',
       body: { display_name: form.display_name || undefined, summary: form.summary || undefined }
     })
     await refreshActor()
-    notice.value = 'Profil enregistré.'
+    flash('Profil enregistré.')
   } finally {
     savingProfile.value = false
   }
@@ -75,12 +82,12 @@ useHead({ title: 'Mon espace — Wilder' })
     <h1>{{ user?.display_name || user?.username }}</h1>
     <p class="lede">Votre profil et votre espace personnel sur le réseau.</p>
 
-    <section class="profile">
+    <section class="profile rise">
       <div class="avatar">
         <img v-if="avatarUrl" :src="mediaSrc(avatarUrl)" alt="avatar" />
-        <div v-else class="avatar-ph" aria-hidden="true">◈</div>
-        <label class="btn ghost sm">
-          {{ uploadingAvatar ? '…' : 'Changer l’avatar' }}
+        <div v-else class="avatar-ph" aria-hidden="true">{{ (user?.display_name || user?.username || '?').charAt(0).toUpperCase() }}</div>
+        <label class="btn ghost sm" :class="{ loading: uploadingAvatar }">
+          Changer l’avatar
           <input type="file" accept="image/*" hidden @change="onPickAvatar" />
         </label>
       </div>
@@ -93,8 +100,10 @@ useHead({ title: 'Mon espace — Wilder' })
           <textarea v-model="form.summary" rows="3" placeholder="Quelques mots sur vous…" />
         </label>
         <div class="actions">
-          <button class="btn" type="submit" :disabled="savingProfile">{{ savingProfile ? '…' : 'Enregistrer' }}</button>
-          <span v-if="notice" class="meta">{{ notice }}</span>
+          <button class="btn" type="submit" :class="{ loading: savingProfile }" :disabled="savingProfile">Enregistrer</button>
+          <Transition name="list">
+            <span v-if="notice" class="toast">{{ notice }}</span>
+          </Transition>
         </div>
       </form>
     </section>
@@ -105,7 +114,7 @@ useHead({ title: 'Mon espace — Wilder' })
     </dl>
 
     <h2>Raccourcis</h2>
-    <div class="soon">
+    <div class="soon stagger">
       <NuxtLink class="card" to="/moi/feed"><h3>Mon fil →</h3><p>Ce qui a changé dans vos groupes depuis votre dernière visite.</p></NuxtLink>
       <NuxtLink class="card" to="/moi/notes"><h3>Mes notes →</h3><p>Vos notes privées, visibles de vous seul.</p></NuxtLink>
       <NuxtLink class="card" to="/moi/recherche"><h3>Ma recherche →</h3><p>Vos documents de recherche personnels.</p></NuxtLink>

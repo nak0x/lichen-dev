@@ -73,10 +73,15 @@ async function onPickImage(e: Event) {
 }
 
 const notice = ref('')
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+function flash(msg: string) {
+  notice.value = msg
+  clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => (notice.value = ''), 4500)
+}
 
 async function publish() {
   posting.value = true
-  notice.value = ''
   try {
     const post = await $fetch<{ status: string }>('/api/backend/posts', {
       method: 'POST',
@@ -92,9 +97,9 @@ async function publish() {
     attached.value = null
     // A guest's submission comes back `pending`: it is held for admin review and
     // won't appear in the feed yet, so tell them rather than silently refreshing.
-    notice.value = post.status === 'pending'
+    flash(post.status === 'pending'
       ? 'Observation envoyée. Elle sera visible après validation par un administrateur.'
-      : ''
+      : 'Observation publiée.')
     await Promise.all([refreshPosts(), refreshCaptured(), refreshPictures()])
   } finally {
     posting.value = false
@@ -131,19 +136,23 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
       <p v-if="group.role === 'guest'" class="review-note">
         En tant qu’invité, vos observations sont relues par un administrateur avant publication.
       </p>
-      <p v-if="notice" class="ok">{{ notice }}</p>
+      <Transition name="list">
+        <p v-if="notice" class="toast compose-toast">{{ notice }}</p>
+      </Transition>
       <textarea v-model="draft.content" rows="3" placeholder="Partager une observation…" required />
-      <figure v-if="attached" class="preview">
-        <img :src="mediaSrc(attached.url)" alt="aperçu" />
-        <button type="button" class="btn ghost sm" @click="attached = null">Retirer</button>
-      </figure>
+      <Transition name="list">
+        <figure v-if="attached" class="preview">
+          <img :src="mediaSrc(attached.url)" alt="aperçu" />
+          <button type="button" class="btn ghost sm" @click="attached = null">Retirer</button>
+        </figure>
+      </Transition>
       <div class="composer-foot">
         <input v-model="draft.tags" type="text" placeholder="étiquettes : castor nuit" />
-        <label class="imgbtn btn ghost sm">
-          {{ uploading ? '…' : (attached ? 'Image ✓' : 'Image') }}
+        <label class="imgbtn btn ghost sm" :class="{ loading: uploading }">
+          {{ attached ? 'Image ✓' : 'Image' }}
           <input type="file" accept="image/*" hidden @change="onPickImage" />
         </label>
-        <button class="btn" type="submit" :disabled="posting || !draft.content">{{ posting ? '…' : 'Publier' }}</button>
+        <button class="btn" type="submit" :class="{ loading: posting }" :disabled="posting || !draft.content">Publier</button>
       </div>
     </form>
 
@@ -155,7 +164,7 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
         <input v-model="reading.metric" type="text" placeholder="grandeur (température)" required />
         <input v-model="reading.value" type="number" step="any" placeholder="valeur" required />
         <input v-model="reading.unit" type="text" placeholder="unité (°C)" />
-        <button class="btn sm" type="submit" :disabled="recording">{{ recording ? '…' : 'Relever' }}</button>
+        <button class="btn sm" type="submit" :class="{ loading: recording }" :disabled="recording">Relever</button>
       </form>
 
       <div v-if="series && series.length" class="charts">
@@ -173,24 +182,26 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
       <button :class="['tabbtn', { on: tab === 'captured' }]" @click="tab = 'captured'">Captations</button>
     </div>
 
+    <Transition name="page" mode="out-in">
+    <div :key="tab">
     <template v-if="tab === 'posts'">
       <div class="filter">
         <input v-model="tag" type="search" placeholder="filtrer par étiquette (sans #)" />
         <button v-if="tag" class="btn ghost sm" @click="tag = ''">Effacer</button>
       </div>
-      <div v-if="posts && posts.length" class="feed">
+      <TransitionGroup v-if="posts && posts.length" name="list" tag="div" class="feed">
         <PostItem v-for="p in posts" :key="p.id" :post="p" />
-      </div>
+      </TransitionGroup>
       <div v-else class="empty">Aucune observation{{ tag ? ' pour cette étiquette' : '' }}.</div>
     </template>
 
     <template v-else-if="tab === 'gallery'">
-      <div v-if="pictures && pictures.length" class="gallery">
+      <TransitionGroup v-if="pictures && pictures.length" name="list" tag="div" class="gallery">
         <figure v-for="(pic, i) in pictures" :key="i">
           <img :src="mediaSrc(pic.url)" :alt="`photo de ${pic.author}`" loading="lazy" />
           <figcaption>{{ pic.author }}</figcaption>
         </figure>
-      </div>
+      </TransitionGroup>
       <div v-else class="empty">Aucune image partagée.</div>
     </template>
 
@@ -199,11 +210,13 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
         <strong>Captations.</strong> Uniquement les publications des stations de capture
         (comptes de type <code>Service</code>) de ce groupe.
       </p>
-      <div v-if="captured && captured.length" class="feed">
+      <TransitionGroup v-if="captured && captured.length" name="list" tag="div" class="feed">
         <PostItem v-for="p in captured" :key="p.id" :post="p" />
-      </div>
+      </TransitionGroup>
       <div v-else class="empty">Aucune captation.</div>
     </template>
+    </div>
+    </Transition>
   </div>
 </template>
 
@@ -213,12 +226,18 @@ useHead({ title: () => (group.value ? `${group.value.name} — Wilder` : 'Groupe
 .composer { margin: 1.2rem 0; }
 .composer textarea { width: 100%; }
 .review-note { font-size: .82rem; color: var(--ink-soft); margin: 0 0 .6rem; }
-.ok { font-size: .85rem; color: var(--forest); margin: 0 0 .6rem; }
+.compose-toast { margin: 0 0 .7rem; }
 .composer-foot { display: flex; gap: .5rem; margin-top: .5rem; align-items: center; }
 .composer-foot input { flex: 1; }
 .composer-foot .btn { flex: none; }
 .tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--line-strong); margin: 1.4rem 0 1rem; }
-.tabbtn { font: inherit; font-size: .9rem; background: none; border: 0; padding: .5rem .8rem; cursor: pointer; color: var(--ink-soft); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabbtn {
+  font: inherit; font-size: .9rem; background: none; border: 0; padding: .5rem .8rem; cursor: pointer;
+  color: var(--ink-soft); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.tabbtn:hover { color: var(--forest); background: var(--lichen-wash); }
 .tabbtn.on { color: var(--forest); border-bottom-color: var(--forest); font-weight: 600; }
 .filter { display: flex; gap: .5rem; margin-bottom: 1rem; }
 .filter input { flex: 1; }

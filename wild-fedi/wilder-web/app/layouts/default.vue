@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const annee = new Date().getFullYear()
 const { instanceName, homeHandle } = useRuntimeConfig().public
+const route = useRoute()
+
+const menuOpen = ref(false)
+watch(() => route.fullPath, () => { menuOpen.value = false })
 </script>
 
 <template>
@@ -8,7 +12,18 @@ const { instanceName, homeHandle } = useRuntimeConfig().public
     <header class="top">
       <div class="wrap-wide top-in">
         <NuxtLink to="/" class="brand">Wilder <span>· observations naturalistes fédérées</span></NuxtLink>
-        <nav>
+
+        <button
+          class="nav-toggle"
+          :aria-expanded="menuOpen"
+          aria-controls="public-nav"
+          aria-label="Menu"
+          @click="menuOpen = !menuOpen"
+        >
+          <span aria-hidden="true">{{ menuOpen ? '✕' : '☰' }}</span> Menu
+        </button>
+
+        <nav id="public-nav" class="nav" :class="{ open: menuOpen }">
           <NuxtLink to="/">Le fil</NuxtLink>
           <NuxtLink to="/carte">Carte</NuxtLink>
           <NuxtLink :to="{ path: '/acteur', query: { h: homeHandle } }">Acteur</NuxtLink>

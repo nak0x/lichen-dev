@@ -25,6 +25,18 @@
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Motion & elevation. Shadows stay barely-there — the paper aesthetic reads
+     through tinted ink rather than grey drop-shadows — and appear on interaction
+     only. Every duration is funnelled through these tokens so reduced-motion can
+     zero them out in one place. */
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --fast: 120ms;
+  --med: 220ms;
+  --slow: 420ms;
+  --shadow: 0 1px 2px rgba(28, 38, 32, .04);
+  --shadow-lift: 0 6px 18px -6px rgba(28, 38, 32, .18), 0 2px 5px -3px rgba(28, 38, 32, .12);
+  --ring: color-mix(in srgb, var(--forest) 45%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +53,9 @@
     --lichen-wash: #202a20;
     --alert: #e0a08e;
     --alert-wash: #2c211d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .25);
+    --shadow-lift: 0 8px 22px -8px rgba(0, 0, 0, .55), 0 2px 6px -3px rgba(0, 0, 0, .4);
+    --ring: color-mix(in srgb, var(--forest) 55%, transparent);
   }
 }
 
@@ -62,8 +77,11 @@ h1 { font-size: 1.85rem; margin: 0 0 .4rem; }
 h2 { font-size: 1.3rem; margin: 2.4rem 0 .8rem; }
 h3 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
 p { margin: 0 0 1rem; }
-a { color: var(--forest); text-underline-offset: .2em; }
+a { color: var(--forest); text-underline-offset: .2em; transition: color var(--fast) var(--ease), text-decoration-thickness var(--fast) var(--ease); }
 a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px;
+}
 small { font-size: .82rem; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 2.4rem 0; }
 ul { padding-left: 1.15rem; }
@@ -90,9 +108,61 @@ code { font-family: var(--mono); font-size: .85em; }
   text-decoration: none;
 }
 .brand span { color: var(--ink-soft); font-weight: 400; letter-spacing: 0; text-transform: none; }
-.top nav { display: flex; gap: 1.1rem; font-size: .86rem; }
-.top nav a { color: var(--ink-soft); text-decoration: none; }
-.top nav a:hover, .top nav a.router-link-active { color: var(--forest); text-decoration: underline; }
+.top-in { position: relative; }
+.nav { display: flex; align-items: center; gap: .15rem; font-size: .86rem; flex-wrap: wrap; }
+.nav a {
+  color: var(--ink-soft); text-decoration: none;
+  padding: .32rem .62rem; border-radius: 999px; position: relative;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.nav a:hover { color: var(--forest); background: var(--lichen-wash); text-decoration: none; }
+/* Active link: forest text + a short underline that grows in. */
+.nav a.router-link-active { color: var(--forest-ink); font-weight: 600; }
+.nav a.router-link-active::after {
+  content: ""; position: absolute; left: .62rem; right: .62rem; bottom: .05rem; height: 2px;
+  background: var(--forest); border-radius: 2px; transform-origin: center;
+  animation: navmark var(--med) var(--ease) both;
+}
+@keyframes navmark { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+
+/* The signed-in user cluster, set apart from the primary links. */
+.nav .user {
+  display: inline-flex; align-items: center; gap: .6rem; margin-left: .35rem;
+  padding-left: .8rem; border-left: 1px solid var(--line-strong);
+}
+.nav .who { color: var(--ink); font-weight: 600; }
+
+/* Mobile menu toggle — hidden on wide screens. */
+.nav-toggle {
+  display: none; font: inherit; cursor: pointer; background: transparent;
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  color: var(--ink); padding: .3rem .6rem; line-height: 1; gap: .4rem; align-items: center;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.nav-toggle:hover { border-color: var(--lichen); background: var(--lichen-wash); }
+
+@media (max-width: 52rem) {
+  .nav-toggle { display: inline-flex; }
+  .nav { display: none; }
+  .nav.open {
+    display: flex;
+    position: absolute; top: calc(100% + .3rem); right: 0; z-index: 30;
+    flex-direction: column; align-items: stretch; gap: .1rem;
+    min-width: 13rem; padding: .5rem; font-size: .95rem;
+    background: var(--paper); border: 1px solid var(--line-strong);
+    border-radius: var(--radius); box-shadow: var(--shadow-lift);
+    transform-origin: top right;
+    animation: pop var(--fast) var(--ease) both;
+  }
+  .nav a { padding: .55rem .7rem; border-radius: var(--radius); }
+  .nav a.router-link-active::after { display: none; }
+  .nav a.router-link-active { background: var(--lichen-wash); }
+  .nav .user {
+    margin-left: 0; padding-left: 0; border-left: 0;
+    border-top: 1px solid var(--line); margin-top: .3rem; padding-top: .5rem;
+    flex-direction: column; align-items: flex-start; gap: .4rem;
+  }
+}
 
 main { padding: 2.5rem 0 3.5rem; }
 
@@ -128,7 +198,16 @@ main { padding: 2.5rem 0 3.5rem; }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1.25rem;
+  box-shadow: var(--shadow);
+  transition: border-color var(--med) var(--ease), box-shadow var(--med) var(--ease), transform var(--med) var(--ease);
 }
+/* A card that is itself a link gets a gentle lift + a forest edge on hover. */
+a.card { text-decoration: none; color: inherit; display: block; }
+a.card:hover, button.card:hover {
+  border-color: var(--lichen); box-shadow: var(--shadow-lift); transform: translateY(-3px);
+}
+a.card:active { transform: translateY(-1px); }
+a.card h3 { color: var(--forest); transition: color var(--fast) var(--ease); }
 
 .meta { font-size: .8rem; color: var(--ink-soft); }
 .mono { font-family: var(--mono); font-size: .78rem; word-break: break-all; }
@@ -140,27 +219,49 @@ main { padding: 2.5rem 0 3.5rem; }
   font: inherit; font-size: .95rem; font-weight: 500;
   padding: .6rem 1.2rem; border-radius: var(--radius);
   border: 1px solid var(--forest); background: var(--forest); color: var(--paper);
-  cursor: pointer; text-decoration: none; display: inline-block;
+  cursor: pointer; text-decoration: none; display: inline-flex;
+  align-items: center; justify-content: center; gap: .5rem;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease), opacity var(--fast) var(--ease);
 }
-.btn:hover { background: var(--forest-ink); border-color: var(--forest-ink); }
-.btn[disabled] { opacity: .55; cursor: progress; }
-.btn.ghost { background: transparent; color: var(--forest); }
-.btn.ghost:hover { background: var(--lichen-wash); }
+.btn:hover { background: var(--forest-ink); border-color: var(--forest-ink); transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.btn:active { transform: translateY(0) scale(.98); box-shadow: none; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--forest); box-shadow: none; }
+.btn.ghost:hover { background: var(--lichen-wash); box-shadow: none; }
+.btn.ghost.danger { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 45%, var(--line-strong)); }
+.btn.ghost.danger:hover { background: var(--alert-wash); border-color: var(--alert); }
+.btn.danger { background: var(--alert); border-color: var(--alert); }
+.btn.danger:hover { background: color-mix(in srgb, var(--alert) 82%, #000); border-color: color-mix(in srgb, var(--alert) 82%, #000); }
 .btn.sm { font-size: .85rem; padding: .35rem .75rem; }
-@media (prefers-color-scheme: dark) { .btn { color: #12160f; } }
+/* Loading button: swap label for a spinner, keep its footprint so layout is calm. */
+.btn.loading { color: transparent !important; pointer-events: none; position: relative; }
+.btn.loading::after {
+  content: ""; position: absolute; width: 1em; height: 1em; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent; color: var(--paper);
+  animation: spin .6s linear infinite;
+}
+.btn.ghost.loading::after { color: var(--forest); }
+@media (prefers-color-scheme: dark) { .btn { color: #12160f; } .btn.loading::after { color: #12160f; } }
 
 .actions { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
 
 /* --- Champs -------------------------------------------------------------- */
 
-input[type="text"], input[type="search"], select {
+input[type="text"], input[type="search"], input[type="password"],
+input[type="number"], input[type="email"], select, textarea {
   width: 100%; font: inherit; font-size: .95rem;
   color: var(--ink); background: var(--paper);
   border: 1px solid var(--line-strong); border-radius: var(--radius);
   padding: .55rem .7rem;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast) var(--ease);
 }
-input:focus-visible, select:focus-visible {
-  outline: 2px solid var(--forest); outline-offset: 1px; border-color: var(--forest);
+textarea { resize: vertical; min-height: 4.5rem; line-height: 1.55; font-family: var(--sans); }
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--ink-soft) 70%, transparent); }
+input:hover, select:hover, textarea:hover { border-color: var(--lichen); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none; border-color: var(--forest);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 /* --- Recherche d'acteur (WebFinger) -------------------------------------- */
@@ -175,8 +276,9 @@ input:focus-visible, select:focus-visible {
   display: inline-block; font-size: .72rem; padding: .1rem .5rem;
   border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-soft);
   margin: 0 .2rem .2rem 0; white-space: nowrap; text-decoration: none;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
-a.tag:hover { border-color: var(--forest); color: var(--forest); }
+a.tag:hover { border-color: var(--forest); color: var(--forest); background: var(--lichen-wash); }
 .tag.hash { border-color: var(--lichen); color: var(--forest); background: var(--lichen-wash); }
 
 .badge {
@@ -206,6 +308,21 @@ a.tag:hover { border-color: var(--forest); color: var(--forest); }
 .dl dt { flex: 0 0 6.5rem; color: var(--ink-soft); }
 .dl dd { margin: 0; flex: 1; min-width: 0; }
 
+/* --- Tableaux ------------------------------------------------------------ */
+
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+thead th {
+  text-align: left; font-family: var(--serif); font-weight: 600; font-size: .78rem;
+  letter-spacing: .04em; color: var(--ink-soft); text-transform: uppercase;
+  padding: .7rem .9rem; border-bottom: 1px solid var(--line-strong); white-space: nowrap;
+}
+tbody td { padding: .7rem .9rem; border-top: 1px solid var(--line); vertical-align: middle; }
+tbody tr { transition: background var(--fast) var(--ease); }
+tbody tr:first-child td { border-top: 0; }
+tbody tr:hover { background: var(--lichen-wash); }
+tbody tr.dim { opacity: .55; }
+
 /* --- Fil d'observations -------------------------------------------------- */
 
 .feed { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.4rem; }
@@ -216,7 +333,12 @@ a.tag:hover { border-color: var(--forest); color: var(--forest); }
   border-left: 2px solid var(--lichen);
   border-radius: var(--radius);
   padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow);
+  transition: border-left-color var(--med) var(--ease), box-shadow var(--med) var(--ease);
 }
+.observation:hover { border-left-color: var(--forest); box-shadow: var(--shadow-lift); }
+.observation .obs-media img { transition: transform var(--slow) var(--ease), filter var(--med) var(--ease); }
+.observation .obs-media img:hover { transform: scale(1.015); filter: saturate(1.08); }
 .obs-head {
   display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
   font-size: .78rem; color: var(--ink-soft); margin-bottom: .5rem;
@@ -273,7 +395,12 @@ a.tag:hover { border-color: var(--forest); color: var(--forest); }
 /* --- Instance (NodeInfo) ------------------------------------------------- */
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .7rem; }
-.kpi { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem .9rem; }
+.kpi {
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem .9rem;
+  box-shadow: var(--shadow);
+  transition: border-color var(--med) var(--ease), box-shadow var(--med) var(--ease), transform var(--med) var(--ease);
+}
+.kpi:hover { border-color: var(--lichen); box-shadow: var(--shadow-lift); transform: translateY(-2px); }
 .kpi b { display: block; font-family: var(--serif); font-size: 1.75rem; line-height: 1.1; color: var(--forest); }
 .kpi span { display: block; font-size: .78rem; color: var(--ink-soft); }
 
@@ -310,4 +437,86 @@ a.tag:hover { border-color: var(--forest); color: var(--forest); }
 @media print {
   .top nav, .foot, .btn, .raw { display: none; }
   body { background: #fff; color: #000; }
+}
+
+/* ===========================================================================
+   MOUVEMENT — transitions de page, entrées, états de chargement
+   Tout est désactivé plus bas si l'utilisateur préfère le mouvement réduit.
+=========================================================================== */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { to { background-position-x: -200%; } }
+@keyframes pop { 0% { transform: scale(.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* Transition de page globale (nuxt.config → app.pageTransition "page"). A quick
+   cross-fade with a few pixels of travel, out-in so pages never overlap. */
+.page-enter-active { transition: opacity var(--med) var(--ease), transform var(--med) var(--ease); }
+.page-leave-active { transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.page-enter-from { opacity: 0; transform: translateY(8px); }
+.page-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* Entrance helpers. `.rise` on any block; `.stagger` on a list to cascade its
+   direct children in. Delays are capped so long lists don't crawl in forever. */
+.rise { animation: rise var(--slow) var(--ease) both; }
+.stagger > * { animation: rise var(--slow) var(--ease) both; }
+.stagger > *:nth-child(1) { animation-delay: 30ms; }
+.stagger > *:nth-child(2) { animation-delay: 70ms; }
+.stagger > *:nth-child(3) { animation-delay: 110ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 190ms; }
+.stagger > *:nth-child(6) { animation-delay: 230ms; }
+.stagger > *:nth-child(n+7) { animation-delay: 260ms; }
+
+/* Vue list-transition helper (e.g. the review queue, feeds adding/removing). */
+.list-enter-active { transition: opacity var(--med) var(--ease), transform var(--med) var(--ease); }
+.list-leave-active { transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease); position: absolute; width: 100%; }
+.list-enter-from { opacity: 0; transform: translateY(8px); }
+.list-leave-to { opacity: 0; transform: scale(.97); }
+.list-move { transition: transform var(--med) var(--ease); }
+
+/* A standalone spinner (inline or centred via .spinner-wrap). */
+.spinner {
+  display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.2em;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
+  animation: spin .6s linear infinite; color: var(--lichen);
+}
+.spinner-wrap { display: grid; place-items: center; gap: .6rem; padding: 2.5rem 1rem; color: var(--ink-soft); font-size: .88rem; }
+
+/* Skeleton placeholders — a sweeping shimmer while data loads. */
+.skel {
+  border-radius: var(--radius);
+  background: linear-gradient(100deg, var(--line) 20%, var(--lichen-wash) 40%, var(--line) 60%);
+  background-size: 200% 100%; animation: shimmer 1.3s linear infinite;
+}
+.skel-line { height: .8rem; margin: .45rem 0; }
+.skel-card { height: 6.5rem; }
+
+/* Toast / inline confirmation that slides in and can fade itself out. */
+.toast {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .85rem; color: var(--forest-ink);
+  background: var(--lichen-wash); border: 1px solid var(--lichen);
+  padding: .3rem .7rem; border-radius: 999px;
+  animation: pop var(--med) var(--ease) both;
+}
+.toast::before { content: "✓"; font-weight: 700; }
+
+/* --- Selection & scrollbars (themed, unobtrusive) ------------------------ */
+::selection { background: color-mix(in srgb, var(--lichen) 45%, transparent); color: var(--ink); }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; border: 2px solid var(--bg); }
+*::-webkit-scrollbar-thumb:hover { background: var(--lichen); }
+
+/* ---------------------------------------------------------------------------
+   Respecter la préférence « mouvement réduit » : on neutralise tout d'un coup.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important;
+  }
+  .btn:hover, .card:hover, a.card:hover, .kpi:hover, .observation:hover { transform: none !important; }
 }

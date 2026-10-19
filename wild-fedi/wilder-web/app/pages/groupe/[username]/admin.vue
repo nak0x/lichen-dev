@@ -22,26 +22,41 @@ const { data: pending, refresh: refreshPending } = await useAsyncData(`pending-$
   authFetch<any[]>(`/api/backend/groups/${username}/pending`)
 )
 
+// Per-item in-flight tracking, so only the button being pressed spins.
+const busy = reactive(new Set<string>())
+const isBusy = (id: string) => busy.has(id)
+
 async function setRole(accountId: string, role: string) {
-  await $fetch(`/api/backend/groups/${username}/members/${accountId}`, {
-    method: 'PATCH',
-    body: { role }
-  })
-  await refresh()
+  busy.add(accountId)
+  try {
+    await $fetch(`/api/backend/groups/${username}/members/${accountId}`, {
+      method: 'PATCH',
+      body: { role }
+    })
+    await refresh()
+  } finally {
+    busy.delete(accountId)
+  }
 }
 
 async function remove(accountId: string) {
-  await $fetch(`/api/backend/groups/${username}/members/${accountId}`, { method: 'DELETE' })
-  await refresh()
+  busy.add(accountId)
+  try {
+    await $fetch(`/api/backend/groups/${username}/members/${accountId}`, { method: 'DELETE' })
+    await refresh()
+  } finally {
+    busy.delete(accountId)
+  }
 }
 
-async function approve(id: string) {
-  await $fetch(`/api/backend/posts/${id}/approve`, { method: 'POST' })
-  await refreshPending()
-}
-async function reject(id: string) {
-  await $fetch(`/api/backend/posts/${id}/reject`, { method: 'POST' })
-  await refreshPending()
+async function decide(id: string, verb: 'approve' | 'reject') {
+  busy.add(id)
+  try {
+    await $fetch(`/api/backend/posts/${id}/${verb}`, { method: 'POST' })
+    await refreshPending()
+  } finally {
+    busy.delete(id)
+  }
 }
 
 useHead({ title: `Admin — ${username}` })
@@ -64,7 +79,7 @@ useHead({ title: `Admin — ${username}` })
         Les observations proposées par les invités attendent votre validation avant
         d’être publiées et diffusées.
       </p>
-      <div v-if="pending && pending.length" class="queue">
+      <TransitionGroup v-if="pending && pending.length" name="list" tag="div" class="queue">
         <article v-for="p in pending" :key="p.id" class="card pend">
           <header>
             <strong>@{{ p.author }}</strong>
@@ -75,11 +90,11 @@ useHead({ title: `Admin — ${username}` })
             <span v-for="t in p.tags" :key="t" class="tag">{{ t }}</span>
           </p>
           <div class="pend-actions">
-            <button class="btn sm" @click="approve(p.id)">Valider</button>
-            <button class="btn ghost danger sm" @click="reject(p.id)">Refuser</button>
+            <button class="btn sm" :class="{ loading: isBusy(p.id) }" :disabled="isBusy(p.id)" @click="decide(p.id, 'approve')">Valider</button>
+            <button class="btn ghost danger sm" :disabled="isBusy(p.id)" @click="decide(p.id, 'reject')">Refuser</button>
           </div>
         </article>
-      </div>
+      </TransitionGroup>
       <div v-else class="empty">Rien à valider.</div>
 
       <!-- Members: trust tiers -->
@@ -88,13 +103,14 @@ useHead({ title: `Admin — ${username}` })
         <table>
           <thead><tr><th>Membre</th><th>Rôle</th><th></th></tr></thead>
           <tbody>
-            <tr v-for="m in members" :key="m.account_id">
+            <tr v-for="m in members" :key="m.account_id" :class="{ dim: isBusy(m.account_id) }">
               <td>{{ m.display_name || m.username }} <span class="mono">@{{ m.username }}</span></td>
               <td>
                 <span v-if="m.account_id === user?.id" class="self">{{ m.role }} (vous)</span>
                 <select
                   v-else
                   :value="m.role"
+                  :disabled="isBusy(m.account_id)"
                   @change="setRole(m.account_id, ($event.target as HTMLSelectElement).value)"
                 >
                   <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
@@ -103,7 +119,8 @@ useHead({ title: `Admin — ${username}` })
               <td>
                 <button
                   v-if="m.account_id !== user?.id"
-                  class="btn danger sm"
+                  class="btn ghost danger sm"
+                  :disabled="isBusy(m.account_id)"
                   @click="remove(m.account_id)"
                 >
                   Retirer
@@ -127,7 +144,8 @@ useHead({ title: `Admin — ${username}` })
 .pend-actions { display: flex; gap: .5rem; }
 .tags { display: flex; gap: .3rem; flex-wrap: wrap; margin: .3rem 0; }
 .tag { font-size: .72rem; color: var(--forest); }
-select { font: inherit; padding: .25rem .4rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+/* Compact the role picker to sit neatly inside a table cell. */
+td select { width: auto; min-width: 9rem; padding: .3rem .5rem; font-size: .85rem; }
 .self { color: var(--ink-soft); font-size: .85rem; }
 .mono { color: var(--ink-soft); font-size: .8rem; }
 </style>
