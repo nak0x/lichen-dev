@@ -29,7 +29,7 @@ useHead({ title: () => (actor.value ? `${handleOf(actor.value)} — Wilder` : 'A
 
 <template>
   <div class="wrap">
-    <p class="oeil">Acteur fédéré</p>
+    <p class="oeil"><Fa icon="binoculars" /> Acteur fédéré</p>
     <LookupForm :value="typeof route.query.h === 'string' ? route.query.h : ''" />
 
     <div v-if="pending" class="spin" style="margin-top:1.4rem">Résolution de l'acteur…</div>

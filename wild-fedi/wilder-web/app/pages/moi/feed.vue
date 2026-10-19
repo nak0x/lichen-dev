@@ -2,12 +2,15 @@
 // The personal feed: everything new in my groups since I last looked. Reading
 // it advances the mark, so it is deliberately a single bounded batch — not an
 // infinite timeline. Revisiting shows only what arrived since.
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const authFetch = useRequestFetch()
-const { data } = await useAsyncData('personal-feed', () =>
+const { openComposer, posted } = useComposer()
+const { data, refresh } = await useAsyncData('personal-feed', () =>
   authFetch<{ since: string; posts: any[] }>('/api/backend/feed')
 )
+// A new post from the global composer should show up here on return.
+watch(posted, () => refresh())
 
 const sinceLabel = computed(() =>
   data.value ? new Date(data.value.since).toLocaleString('fr-FR', {
@@ -20,16 +23,22 @@ useHead({ title: 'Mon fil — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">Mon fil</p>
+    <p class="oeil"><Fa icon="house" /> Mon fil</p>
     <h1>Depuis votre dernière visite</h1>
-    <p class="lede">Nouveau dans vos groupes depuis le {{ sinceLabel }}.</p>
+    <p class="lede">Ce qui est arrivé dans vos groupes depuis le {{ sinceLabel }}.</p>
 
-    <div v-if="data && data.posts.length" class="feed">
+    <TransitionGroup v-if="data && data.posts.length" name="list" tag="div" class="feed">
       <PostItem v-for="p in data.posts" :key="p.id" :post="p" />
-    </div>
+    </TransitionGroup>
+
     <div v-else class="empty">
-      Rien de neuf. Revenez après que vos groupes aient publié — ce fil ne montre
-      que ce qui est arrivé depuis votre dernier passage.
+      <Fa icon="seedling" class="fa-icon" />
+      <p>Rien de neuf pour l'instant. Ce fil ne montre que ce qui est arrivé
+        depuis votre dernier passage.</p>
+      <div class="actions">
+        <button class="btn accent" @click="openComposer()"><Fa icon="feather" /> Publier une observation</button>
+        <NuxtLink class="btn ghost" to="/groupes"><Fa icon="users" /> Rejoindre un groupe</NuxtLink>
+      </div>
     </div>
   </div>
 </template>

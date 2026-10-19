@@ -8,7 +8,12 @@ const pretty = computed(() => JSON.stringify(props.data, null, 2))
 
 <template>
   <details class="raw">
-    <summary>{{ label || 'JSON ActivityPub' }}</summary>
+    <summary><Fa icon="chevron-right" class="chev" /> {{ label || 'JSON ActivityPub' }}</summary>
     <pre>{{ pretty }}</pre>
   </details>
 </template>
+
+<style scoped>
+.chev { transition: transform var(--fast) var(--ease); font-size: .7em; }
+details[open] .chev { transform: rotate(90deg); }
+</style>

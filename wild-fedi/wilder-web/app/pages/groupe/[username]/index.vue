@@ -2,7 +2,7 @@
 // A group's space: public view with posts (filterable), a "captured" tab for
 // capture-station content, a composer for members, join/leave, and — for admins
 // — a link to the admin view.
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const username = route.params.username as string

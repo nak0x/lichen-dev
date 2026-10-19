@@ -52,7 +52,7 @@ const verbLabel = computed(() => {
     </div>
 
     <div v-if="place" class="place">
-      <span class="pin" aria-hidden="true">◈</span>
+      <Fa icon="location-dot" />
       <span>{{ place.name || 'Lieu du relevé' }}</span>
       <span class="coord">{{ place.lat.toFixed(4) }}, {{ place.lon.toFixed(4) }}</span>
     </div>

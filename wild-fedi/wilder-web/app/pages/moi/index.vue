@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Personal space — profile management (avatar, display name, bio) plus
 // shortcuts. Notes, research and the determination key arrive in a later phase.
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const { user } = useAuth()
 const { homeHandle } = useRuntimeConfig().public
@@ -78,7 +78,7 @@ useHead({ title: 'Mon espace — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">Mon espace</p>
+    <p class="oeil"><Fa icon="user" /> Mon espace</p>
     <h1>{{ user?.display_name || user?.username }}</h1>
     <p class="lede">Votre profil et votre espace personnel sur le réseau.</p>
 
@@ -115,11 +115,11 @@ useHead({ title: 'Mon espace — Wilder' })
 
     <h2>Raccourcis</h2>
     <div class="soon stagger">
-      <NuxtLink class="card" to="/moi/feed"><h3>Mon fil →</h3><p>Ce qui a changé dans vos groupes depuis votre dernière visite.</p></NuxtLink>
-      <NuxtLink class="card" to="/moi/notes"><h3>Mes notes →</h3><p>Vos notes privées, visibles de vous seul.</p></NuxtLink>
-      <NuxtLink class="card" to="/moi/recherche"><h3>Ma recherche →</h3><p>Vos documents de recherche personnels.</p></NuxtLink>
-      <NuxtLink class="card" to="/determiner"><h3>Clé de détermination →</h3><p>Identifier une espèce du général au précis.</p></NuxtLink>
-      <NuxtLink class="card" to="/groupes"><h3>Groupes →</h3><p>Rejoindre un cercle d'étude ou en créer un.</p></NuxtLink>
+      <NuxtLink class="card" to="/moi/feed"><h3><Fa icon="house" /> Mon fil</h3><p>Ce qui a changé dans vos groupes depuis votre dernière visite.</p></NuxtLink>
+      <NuxtLink class="card" to="/moi/notes"><h3><Fa icon="book-open" /> Mes notes</h3><p>Vos notes privées, visibles de vous seul.</p></NuxtLink>
+      <NuxtLink class="card" to="/moi/recherche"><h3><Fa icon="flask" /> Ma recherche</h3><p>Vos documents de recherche personnels.</p></NuxtLink>
+      <NuxtLink class="card" to="/determiner"><h3><Fa icon="key" /> Clé de détermination</h3><p>Identifier une espèce du général au précis.</p></NuxtLink>
+      <NuxtLink class="card" to="/groupes"><h3><Fa icon="users" /> Mes groupes</h3><p>Rejoindre un cercle d'étude ou en créer un.</p></NuxtLink>
     </div>
   </div>
 </template>
@@ -135,6 +135,7 @@ useHead({ title: 'Mon espace — Wilder' })
 .fields { flex: 1 1 18rem; display: flex; flex-direction: column; gap: .7rem; }
 .fields label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; color: var(--ink-soft); font-weight: 500; }
 .soon { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
-.soon h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.soon h3 { margin: 0 0 .3rem; font-size: 1.02rem; display: flex; align-items: center; gap: .5rem; }
+.soon h3 svg { color: var(--primary); }
 .soon p { margin: 0; font-size: .9rem; color: var(--ink-soft); }
 </style>

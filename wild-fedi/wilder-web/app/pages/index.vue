@@ -19,28 +19,25 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
 </script>
 
 <template>
-  <div>
-    <!-- Hero ----------------------------------------------------------------->
-    <section class="hero">
+  <div class="wrap">
+    <!-- Bandeau d'accueil ---------------------------------------------------->
+    <section class="hero rise">
       <FondLichen />
-      <div class="hero-in rise">
-        <p class="oeil">Réseau LICHEN · fédiverse</p>
-        <h1 class="titre">Wilder</h1>
+      <div class="hero-in">
+        <p class="oeil"><Fa icon="globe" /> Activité du réseau LICHEN</p>
+        <h1 class="titre">Le carnet partagé du vivant</h1>
         <p class="accroche">
-          Un client fédéré qui lit, via ActivityPub, les observations naturalistes
-          qu'une école partage avec le réseau — photos, notes, espèces, lieux.
+          Les observations naturalistes que les écoles du réseau publient et
+          partagent, via ActivityPub — photos, espèces, lieux, relevés.
         </p>
         <div class="hero-lookup">
           <LookupForm :value="homeHandle" />
-          <p class="fine">
-            Cherchez un acteur par son handle <code>@nom@domaine</code> — local ou distant.
-          </p>
         </div>
       </div>
     </section>
 
     <!-- Le fil --------------------------------------------------------------->
-    <section class="wrap">
+    <section>
       <div v-if="pending" class="feed" aria-busy="true" aria-label="Chargement du fil">
         <div v-for="n in 3" :key="n" class="observation skelcard">
           <div class="skel skel-line" style="width:35%"></div>
@@ -88,32 +85,26 @@ useHead({ title: `Wilder — le fil de ${instanceName}` })
 </template>
 
 <style scoped>
-/* La page déborde le rembourrage de <main> pour que le hero touche l'en-tête. */
+/* Bandeau arrondi, contenu dans la colonne de lecture. */
 .hero {
-  position: relative;
-  overflow: hidden;
-  margin-top: -2.5rem;
-  padding: 4rem 0 3.2rem;
-  border-bottom: 1px solid var(--line);
+  position: relative; overflow: hidden;
+  border: 1px solid var(--line); border-radius: var(--r-xl);
+  padding: 2.6rem 2rem 2.4rem;
   background:
-    radial-gradient(120% 90% at 50% 0%, var(--lichen-wash) 0%, transparent 70%),
-    var(--bg);
+    radial-gradient(120% 120% at 100% 0%, var(--sage-wash) 0%, transparent 60%),
+    var(--surface);
+  box-shadow: var(--shadow);
 }
-.hero-in { position: relative; z-index: 1; max-width: 44rem; margin: 0 auto; padding: 0 1.25rem; text-align: center; }
+.hero-in { position: relative; z-index: 1; max-width: 34rem; }
 .titre {
-  font-size: clamp(2.8rem, 11vw, 5.5rem);
-  line-height: 1.05; letter-spacing: .03em; color: var(--forest-ink);
-  margin: .3rem 0 1.1rem;
+  font-size: clamp(1.9rem, 1.2rem + 3vw, 2.9rem);
+  line-height: 1.08; color: var(--forest-ink); margin: .2rem 0 .8rem;
 }
-.accroche {
-  font-family: var(--serif); font-size: clamp(1.05rem, 2.2vw, 1.3rem);
-  line-height: 1.45; max-width: 32rem; margin: 0 auto 1.8rem;
-}
-.hero-lookup { max-width: 30rem; margin: 0 auto; text-align: left; }
-.hero-lookup .fine { font-size: .8rem; color: var(--ink-soft); margin: .5rem 0 0; text-align: center; }
+.accroche { font-size: 1.05rem; color: var(--ink-soft); line-height: 1.5; max-width: 32rem; margin: 0 0 1.4rem; }
+.hero-lookup { max-width: 30rem; }
 
 .feed-head { margin-top: 2.4rem; }
 .feed-head h2 { margin: 0 0 .3rem; }
 .skelcard { pointer-events: none; }
-.skelcard:hover { box-shadow: var(--shadow); border-left-color: var(--lichen); }
+.skelcard:hover { box-shadow: var(--shadow); border-color: var(--line); }
 </style>

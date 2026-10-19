@@ -46,7 +46,7 @@ useHead({ title: 'Wilder — connexion' })
 <template>
   <div class="auth">
     <div class="auth-card card rise">
-      <NuxtLink to="/" class="brand auth-brand">Wilder</NuxtLink>
+      <NuxtLink to="/" class="auth-brand"><span class="mark"><Fa icon="leaf" /></span> Wilder</NuxtLink>
       <Transition name="page" mode="out-in">
         <div :key="mode">
           <p class="oeil">{{ mode === 'register' ? 'Initialiser l’instance' : 'Connexion' }}</p>
@@ -91,10 +91,14 @@ useHead({ title: 'Wilder — connexion' })
     radial-gradient(130% 80% at 50% -10%, var(--lichen-wash) 0%, transparent 60%),
     var(--bg);
 }
-.auth-card { width: 100%; max-width: 24rem; border-top: 3px solid var(--forest); }
+.auth-card { width: 100%; max-width: 24rem; border-radius: var(--r-xl); }
+.auth-brand .mark {
+  width: 1.7rem; height: 1.7rem; display: inline-grid; place-items: center; vertical-align: -.4rem;
+  background: var(--primary); color: #fff; border-radius: 36% 64% 62% 38% / 50% 42% 58% 50%; font-size: .85rem; margin-right: .3rem;
+}
 .auth-brand {
-  display: inline-block; font-family: var(--serif); font-weight: 600; font-size: .95rem;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--ink);
+  display: inline-block; font-family: var(--display); font-weight: 600; font-size: 1.1rem;
+  color: var(--ink);
   text-decoration: none; margin-bottom: 1rem;
 }
 .auth-card h1 { margin: 0 0 .4rem; }

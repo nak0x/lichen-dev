@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Public actualités: the school's events and news, read-only for everyone.
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const authFetch = useRequestFetch()
 const { data: events } = await useAsyncData('events', () => authFetch<any[]>('/api/backend/events'))
@@ -20,7 +20,7 @@ useHead({ title: 'Actualités — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">Le réseau</p>
+    <p class="oeil"><Fa icon="bell" /> Le réseau</p>
     <h1>Actualités &amp; événements</h1>
 
     <h2>Événements à venir</h2>

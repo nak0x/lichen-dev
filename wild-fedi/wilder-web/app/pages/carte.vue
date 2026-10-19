@@ -48,7 +48,7 @@ useHead({ title: 'Carte des relevés — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">Suivi naturaliste</p>
+    <p class="oeil"><Fa icon="map" /> Suivi naturaliste</p>
     <h1>Carte des relevés</h1>
     <p class="lede">
       Les observations géolocalisées de l'instance {{ instanceName }}, situées par leur

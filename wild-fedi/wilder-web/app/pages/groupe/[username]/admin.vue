@@ -3,7 +3,7 @@
 // server enforces admin-only on every mutation; here we also hide the controls
 // from non-admins. Trust tiers: guest (submissions reviewed), contributor
 // (posts directly), admin (moderates).
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const username = route.params.username as string

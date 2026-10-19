@@ -11,7 +11,8 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   telemetry: false,
 
-  css: ['~/assets/css/main.css'],
+  // Self-hosted variable display font (no third-party request) + our stylesheet.
+  css: ['@fontsource-variable/fraunces/index.css', '~/assets/css/main.css'],
 
   runtimeConfig: {
     // Base du serveur wilder (côté serveur uniquement). Surchargeable via WILDER_URL.

@@ -2,7 +2,7 @@
 // The determination key: a guided walk from the general to a species. Start at
 // the roots, answer each discriminating question by choosing a child, follow the
 // breadcrumb back if needed, and land on a species card.
-definePageMeta({ layout: 'app', middleware: 'auth' })
+definePageMeta({ middleware: 'auth' })
 
 const authFetch = useRequestFetch()
 const { data: roots } = await useAsyncData('det-roots', () =>
@@ -34,7 +34,7 @@ useHead({ title: 'Clé de détermination — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">Clé de détermination</p>
+    <p class="oeil"><Fa icon="key" /> Clé de détermination</p>
     <h1>Identifier une espèce</h1>
     <p class="lede">Du plus général au plus précis : répondez à chaque question.</p>
 
@@ -49,7 +49,7 @@ useHead({ title: 'Clé de détermination — Wilder' })
 
     <!-- Species reached -->
     <section v-if="atSpecies" class="species card">
-      <p class="oeil">Espèce</p>
+      <p class="oeil"><Fa icon="leaf" /> Espèce</p>
       <h2>{{ step.node.vernacular || step.node.name }}</h2>
       <p v-if="step.node.vernacular" class="latin">{{ step.node.name }}</p>
       <p class="actions">

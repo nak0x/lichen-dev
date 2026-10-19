@@ -15,7 +15,7 @@ useHead({ title: 'Instance — Wilder' })
 
 <template>
   <div class="wrap">
-    <p class="oeil">NodeInfo</p>
+    <p class="oeil"><Fa icon="chart-line" /> NodeInfo</p>
     <h1>L'instance</h1>
     <p class="lede">
       Le point de découverte du fédiverse : chaque serveur publie ce qu'il fait tourner,

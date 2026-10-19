@@ -17,7 +17,7 @@ const contrats = [
 
 <template>
   <div class="wrap">
-    <p class="oeil">À propos</p>
+    <p class="oeil"><Fa icon="circle-info" /> À propos</p>
     <h1>Un client, pas une plateforme</h1>
     <p class="lede">
       Wilder-web ne stocke aucune donnée et ne possède aucun contenu. Il lit, via le

@@ -1,56 +1,30 @@
 <script setup lang="ts">
-const annee = new Date().getFullYear()
-const { instanceName, homeHandle } = useRuntimeConfig().public
+// The single application shell for everyone (logged in or not): a persistent
+// sidebar + the content column, with a mobile top bar that toggles the sidebar
+// as an off-canvas drawer. The global Composer modal lives here so it can be
+// opened from anywhere.
+const drawer = useState('drawer-open', () => false)
 const route = useRoute()
-
-const menuOpen = ref(false)
-watch(() => route.fullPath, () => { menuOpen.value = false })
+watch(() => route.fullPath, () => { drawer.value = false })
 </script>
 
 <template>
-  <div>
-    <header class="top">
-      <div class="wrap-wide top-in">
-        <NuxtLink to="/" class="brand">Wilder <span>· observations naturalistes fédérées</span></NuxtLink>
+  <div class="app" :class="{ 'drawer-open': drawer }">
+    <AppSidebar />
+    <div class="sb-scrim" @click="drawer = false" />
 
-        <button
-          class="nav-toggle"
-          :aria-expanded="menuOpen"
-          aria-controls="public-nav"
-          aria-label="Menu"
-          @click="menuOpen = !menuOpen"
-        >
-          <span aria-hidden="true">{{ menuOpen ? '✕' : '☰' }}</span> Menu
-        </button>
-
-        <nav id="public-nav" class="nav" :class="{ open: menuOpen }">
-          <NuxtLink to="/">Le fil</NuxtLink>
-          <NuxtLink to="/carte">Carte</NuxtLink>
-          <NuxtLink :to="{ path: '/acteur', query: { h: homeHandle } }">Acteur</NuxtLink>
-          <NuxtLink to="/instance">Instance</NuxtLink>
-          <NuxtLink to="/a-propos">À propos</NuxtLink>
-        </nav>
+    <div class="app-main">
+      <div class="appbar">
+        <button class="burger" aria-label="Menu" @click="drawer = !drawer"><Fa icon="bars" /></button>
+        <NuxtLink to="/" class="sb-brand">
+          <span class="mark" aria-hidden="true"><Fa icon="leaf" /></span> Wilder
+        </NuxtLink>
       </div>
-    </header>
+      <main>
+        <slot />
+      </main>
+    </div>
 
-    <main>
-      <slot />
-    </main>
-
-    <footer class="foot">
-      <div class="wrap-wide">
-        <nav>
-          <NuxtLink to="/">Le fil des observations</NuxtLink>
-          <NuxtLink to="/carte">Carte des relevés</NuxtLink>
-          <NuxtLink to="/instance">Instance {{ instanceName }}</NuxtLink>
-          <NuxtLink to="/a-propos">À propos &amp; protocole</NuxtLink>
-        </nav>
-        <p>
-          Client fédéré de démonstration pour le réseau LICHEN · Parle ActivityPub ·
-          Aucun traceur, aucun cookie · Le navigateur ne contacte jamais directement le serveur.
-        </p>
-        <p>© {{ annee }} Projet LICHEN · Contenu sous licence CC BY 4.0.</p>
-      </div>
-    </footer>
+    <Composer />
   </div>
 </template>
